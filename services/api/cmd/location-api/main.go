@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -40,7 +41,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	pool, err := pgxpool.New(context.Background(), databaseURL)
+	poolConfig, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		logger.Error("could not parse database configuration", "error", err)
+		os.Exit(1)
+	}
+	configuredDatabase := poolConfig.ConnConfig.Database
+	if configuredDatabase == "" {
+		logger.Error("database configuration did not select a database")
+		os.Exit(1)
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
 	if err != nil {
 		logger.Error("could not initialize database pool", "error", err)
 		os.Exit(1)
@@ -49,7 +61,14 @@ func main() {
 
 	api := httpapi.New(pool, logger)
 	server := newServer(addressFromEnvironment(), logger, func(ctx context.Context) error {
-		return httpapi.Readiness(ctx, pool)
+		if err := httpapi.Readiness(ctx, pool); err != nil {
+			var connectedDatabase string
+			if inspectionErr := pool.QueryRow(ctx, `SELECT current_database()`).Scan(&connectedDatabase); inspectionErr != nil {
+				return fmt.Errorf("database readiness failed for configured database %q; database identity inspection failed: %v: %w", configuredDatabase, inspectionErr, err)
+			}
+			return fmt.Errorf("database readiness failed for configured database %q while connected to %q: %w", configuredDatabase, connectedDatabase, err)
+		}
+		return nil
 	}, api)
 
 	logger.Info("starting GoreeCloud Location API", "address", server.Addr)
@@ -95,7 +114,7 @@ func readinessHandler(logger *slog.Logger, readiness readinessCheck) http.Handle
 		defer cancel()
 
 		if err := readiness(ctx); err != nil {
-			logger.Warn("location API is not ready", "dependency", "database")
+			logger.Warn("location API is not ready", "dependency", "database", "error", err)
 			writeHealthResponse(w, http.StatusServiceUnavailable, "not_ready")
 			return
 		}
