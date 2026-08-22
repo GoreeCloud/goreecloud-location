@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ApplyDirectory applies every .sql migration in lexical filename order using
-// one PostgreSQL connection. Migration files remain responsible for their own
-// transaction boundaries and schema_migrations records.
+// ApplyDirectory applies every unrecorded .sql migration in lexical filename
+// order using one PostgreSQL connection. Each migration file owns its transaction
+// boundary and must record its filename (without .sql) in schema_migrations.
 func ApplyDirectory(ctx context.Context, pool *pgxpool.Pool, directory string) ([]string, error) {
 	files, err := migrationFiles(directory)
 	if err != nil {
@@ -29,21 +29,64 @@ func ApplyDirectory(ctx context.Context, pool *pgxpool.Pool, directory string) (
 
 	applied := make([]string, 0, len(files))
 	for _, path := range files {
+		name := filepath.Base(path)
+		version := strings.TrimSuffix(name, filepath.Ext(name))
+
+		recorded, err := migrationRecorded(ctx, connection, version)
+		if err != nil {
+			return applied, fmt.Errorf("check migration %s: %w", name, err)
+		}
+		if recorded {
+			continue
+		}
+
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return applied, fmt.Errorf("read migration %s: %w", filepath.Base(path), err)
+			return applied, fmt.Errorf("read migration %s: %w", name, err)
 		}
 
 		// PgConn.Exec uses PostgreSQL's simple-query protocol, which is appropriate
 		// for migration files that deliberately contain transaction blocks and
 		// multiple SQL statements.
 		if _, err := connection.Conn().PgConn().Exec(ctx, string(content)).ReadAll(); err != nil {
-			return applied, fmt.Errorf("apply migration %s: %w", filepath.Base(path), err)
+			return applied, fmt.Errorf("apply migration %s: %w", name, err)
 		}
-		applied = append(applied, filepath.Base(path))
+
+		recorded, err = migrationRecorded(ctx, connection, version)
+		if err != nil {
+			return applied, fmt.Errorf("verify migration %s: %w", name, err)
+		}
+		if !recorded {
+			return applied, fmt.Errorf("migration %s completed without recording version %q", name, version)
+		}
+		applied = append(applied, name)
 	}
 
 	return applied, nil
+}
+
+func migrationRecorded(ctx context.Context, connection *pgxpool.Conn, version string) (bool, error) {
+	var tableExists bool
+	if err := connection.QueryRow(ctx, `
+		SELECT to_regclass('public.schema_migrations') IS NOT NULL
+	`).Scan(&tableExists); err != nil {
+		return false, err
+	}
+	if !tableExists {
+		return false, nil
+	}
+
+	var recorded bool
+	if err := connection.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM public.schema_migrations
+			WHERE version = $1
+		)
+	`, version).Scan(&recorded); err != nil {
+		return false, err
+	}
+	return recorded, nil
 }
 
 func migrationFiles(directory string) ([]string, error) {
