@@ -90,7 +90,7 @@ func Readiness(ctx context.Context, pool *pgxpool.Pool) error {
 	var applied bool
 	if err := pool.QueryRow(ctx, `
 		SELECT EXISTS (
-			SELECT 1 FROM schema_migrations
+			SELECT 1 FROM public.schema_migrations
 			WHERE version = '0002_auth_devices_preferences'
 		)
 	`).Scan(&applied); err != nil {
