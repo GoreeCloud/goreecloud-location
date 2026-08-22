@@ -36,7 +36,15 @@ jobs:
           go mod verify
 
       - name: Verify formatting
-        run: test -z "$(gofmt -l .)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [[ -n "$unformatted" ]]; then
+            printf 'Go files require gofmt:\n%s\n' "$unformatted" >&2
+            gofmt -d $unformatted >&2
+            exit 1
+          fi
 
       - name: Vet
         run: go vet ./...
