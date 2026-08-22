@@ -52,10 +52,11 @@ jobs:
       - name: Test
         run: go test ./...
 
-      - name: Build API and admin tools
+      - name: Build API, admin, and migration tools
         run: |
           go build ./cmd/location-api
           go build ./cmd/location-admin
+          go build ./cmd/location-migrate
 
   database:
     name: PostgreSQL, PostGIS, and Auth Isolation
@@ -82,31 +83,9 @@ jobs:
       LOCATION_DATABASE_USER: goreecloud_location
       LOCATION_DATABASE_PASSWORD: goreecloud_location_ci_only_not_secret
       LOCATION_DATABASE_SSLMODE: disable
-      POSTGIS_IMAGE: postgis/postgis:17-3.5@sha256:83e9999dc3ad8390c210e76130c3a16365ef4f957bb55200d22b7937cfbcb321
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Apply migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          for migration in migrations/*.sql; do
-            echo "apply $(basename "$migration")"
-            docker run --rm --network host \
-              -e PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
-              "$POSTGIS_IMAGE" \
-              psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U goreecloud_location -d goreecloud_location \
-              < "$migration"
-          done
-
-      - name: Verify schema ownership and PostGIS behavior
-        run: |
-          docker run --rm --network host \
-            -e PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
-            "$POSTGIS_IMAGE" \
-            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U goreecloud_location -d goreecloud_location \
-            < tests/integration/database.sql
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -119,6 +98,21 @@ jobs:
         run: |
           go mod download
           go mod verify
+
+      - name: Apply migrations through the API database path
+        working-directory: services/api
+        run: |
+          go run ./cmd/location-migrate -dir ../../migrations
+          go run ./cmd/location-migrate -dir ../../migrations
+
+      - name: Verify schema ownership and PostGIS behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker exec -i "${{ job.services.postgis.id }}" \
+            env PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
+            psql -v ON_ERROR_STOP=1 -U goreecloud_location -d goreecloud_location \
+            < tests/integration/database.sql
 
       - name: Verify schema-aware API readiness
         shell: bash
