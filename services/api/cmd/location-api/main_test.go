@@ -11,7 +11,7 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
-	server := newServer(":0", slog.Default(), func(context.Context) error { return nil })
+	server := newServer(":0", slog.Default(), func(context.Context) error { return nil }, nil)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 
@@ -35,7 +35,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestReadinessEndpointReady(t *testing.T) {
-	server := newServer(":0", slog.Default(), func(context.Context) error { return nil })
+	server := newServer(":0", slog.Default(), func(context.Context) error { return nil }, nil)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 
@@ -52,7 +52,7 @@ func TestReadinessEndpointReady(t *testing.T) {
 func TestReadinessEndpointNotReady(t *testing.T) {
 	server := newServer(":0", slog.Default(), func(context.Context) error {
 		return errors.New("database unavailable")
-	})
+	}, nil)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 
@@ -67,7 +67,7 @@ func TestReadinessEndpointNotReady(t *testing.T) {
 }
 
 func TestUnknownRouteIsNotFound(t *testing.T) {
-	server := newServer(":0", slog.Default(), func(context.Context) error { return nil })
+	server := newServer(":0", slog.Default(), func(context.Context) error { return nil }, nil)
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/locations", nil)
 

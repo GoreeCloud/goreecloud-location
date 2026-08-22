@@ -6,7 +6,7 @@ The intended production model remains a self-hosted web/API/worker stack using P
 
 ## Development runtime now available
 
-`compose.development.yml` is a **development-only** PostGIS runtime. It exists to validate database migrations, ownership constraints, geospatial operations, and API readiness during Milestone 0. It is not the future production stack and must not be used as evidence of a production cutover.
+`compose.development.yml` is a **development-only** PostGIS runtime. It exists to validate database migrations, ownership constraints, geospatial operations, authenticated persistence, user/device isolation, and API readiness during the Foundation and Users-and-Devices milestones. It is not the future production stack and must not be used as evidence of a production cutover.
 
 The development database:
 
@@ -16,9 +16,9 @@ The development database:
 - stores mutable database state in a named development volume; and
 - exposes a PostgreSQL health check used only for development/runtime validation.
 
-The committed `.env.example` is sanitized. Active `.env` files and `.secrets/` content remain outside Git history.
+The committed `.env.example` is sanitized. Active `.env` files and `.secrets/` content remain outside Git history. Application readiness uses authenticated PostgreSQL access and required-schema verification; the database container health check is only one lower-level dependency signal.
 
-See `docs/development-runtime.md` for the supported workflow.
+See `docs/development-runtime.md` and `docs/authentication.md` for the supported development workflow and credential boundary.
 
 ## Production boundary
 

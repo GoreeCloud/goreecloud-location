@@ -28,10 +28,23 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-          cache-dependency-path: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+
+      - name: Download and verify modules
+        run: |
+          go mod download
+          go mod verify
 
       - name: Verify formatting
-        run: test -z "$(gofmt -l .)"
+        shell: bash
+        run: |
+          set -euo pipefail
+          unformatted="$(gofmt -l .)"
+          if [[ -n "$unformatted" ]]; then
+            printf 'Go files require gofmt:\n%s\n' "$unformatted" >&2
+            gofmt -d $unformatted >&2
+            exit 1
+          fi
 
       - name: Vet
         run: go vet ./...
@@ -39,11 +52,14 @@ jobs:
       - name: Test
         run: go test ./...
 
-      - name: Build
-        run: go build ./cmd/location-api
+      - name: Build API, admin, and migration tools
+        run: |
+          go build ./cmd/location-api
+          go build ./cmd/location-admin
+          go build ./cmd/location-migrate
 
   database:
-    name: PostgreSQL and PostGIS
+    name: PostgreSQL, PostGIS, and Auth Isolation
     runs-on: ubuntu-latest
     services:
       postgis:
@@ -61,52 +77,55 @@ jobs:
           --health-retries 12
     env:
       LOCATION_CI_DATABASE_PASSWORD: goreecloud_location_ci_only_not_secret
-      POSTGIS_IMAGE: postgis/postgis:17-3.5@sha256:83e9999dc3ad8390c210e76130c3a16365ef4f957bb55200d22b7937cfbcb321
+      LOCATION_DATABASE_HOST: 127.0.0.1
+      LOCATION_DATABASE_PORT: "5432"
+      LOCATION_DATABASE_NAME: goreecloud_location
+      LOCATION_DATABASE_USER: goreecloud_location
+      LOCATION_DATABASE_PASSWORD: goreecloud_location_ci_only_not_secret
+      LOCATION_DATABASE_SSLMODE: disable
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
-      - name: Apply migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          for migration in migrations/*.sql; do
-            echo "apply $(basename "$migration")"
-            docker run --rm --network host \
-              -e PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
-              "$POSTGIS_IMAGE" \
-              psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U goreecloud_location -d goreecloud_location \
-              < "$migration"
-          done
-
-      - name: Verify ownership and PostGIS behavior
-        run: |
-          docker run --rm --network host \
-            -e PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
-            "$POSTGIS_IMAGE" \
-            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U goreecloud_location -d goreecloud_location \
-            < tests/integration/database.sql
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-          cache-dependency-path: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
 
-      - name: Verify API readiness against running database
+      - name: Download and verify modules
+        working-directory: services/api
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Apply migrations through the API database path
+        working-directory: services/api
+        run: |
+          go run ./cmd/location-migrate -dir ../../migrations
+          go run ./cmd/location-migrate -dir ../../migrations
+
+      - name: Verify schema ownership and PostGIS behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker exec -i "${{ job.services.postgis.id }}" \
+            env PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
+            psql -v ON_ERROR_STOP=1 -U goreecloud_location -d goreecloud_location \
+            < tests/integration/database.sql
+
+      - name: Verify schema-aware API readiness
         shell: bash
         working-directory: services/api
         env:
           LOCATION_API_ADDRESS: 127.0.0.1:18080
-          LOCATION_DATABASE_HOST: 127.0.0.1
-          LOCATION_DATABASE_PORT: "5432"
         run: |
           set -euo pipefail
           go run ./cmd/location-api > "$RUNNER_TEMP/location-api.log" 2>&1 &
           api_pid=$!
           trap 'kill "$api_pid" 2>/dev/null || true' EXIT
 
-          for _ in $(seq 1 30); do
+          for _ in $(seq 1 45); do
             if curl --fail --silent http://127.0.0.1:18080/readyz > /dev/null; then
               exit 0
             fi
@@ -115,6 +134,11 @@ jobs:
 
           cat "$RUNNER_TEMP/location-api.log" >&2
           exit 1
+
+      - name: Verify authenticated user and device isolation
+        env:
+          LOCATION_API_ADDRESS: 127.0.0.1:18081
+        run: bash ./tests/integration/auth-api.sh
 
   web:
     name: TypeScript Web
