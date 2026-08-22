@@ -1,0 +1,51 @@
+# GoreeCloud Location
+# Keep generated artifacts, local secrets, and machine-specific state out of source control.
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Go
+bin/
+coverage.out
+*.test
+
+# Node / TypeScript
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore
+
+# IDE and editor state
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+
+# Local databases, exports, and location data
+*.sqlite
+*.sqlite3
+*.db
+exports/
+imports/
+local-data/
+
+# Test and coverage output
+coverage/
+test-results/
