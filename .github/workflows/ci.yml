@@ -28,7 +28,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-          cache-dependency-path: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+
+      - name: Download and verify modules
+        run: |
+          go mod download
+          go mod verify
 
       - name: Verify formatting
         run: test -z "$(gofmt -l .)"
@@ -39,11 +44,13 @@ jobs:
       - name: Test
         run: go test ./...
 
-      - name: Build
-        run: go build ./cmd/location-api
+      - name: Build API and admin tools
+        run: |
+          go build ./cmd/location-api
+          go build ./cmd/location-admin
 
   database:
-    name: PostgreSQL and PostGIS
+    name: PostgreSQL, PostGIS, and Auth Isolation
     runs-on: ubuntu-latest
     services:
       postgis:
@@ -61,6 +68,12 @@ jobs:
           --health-retries 12
     env:
       LOCATION_CI_DATABASE_PASSWORD: goreecloud_location_ci_only_not_secret
+      LOCATION_DATABASE_HOST: 127.0.0.1
+      LOCATION_DATABASE_PORT: "5432"
+      LOCATION_DATABASE_NAME: goreecloud_location
+      LOCATION_DATABASE_USER: goreecloud_location
+      LOCATION_DATABASE_PASSWORD: goreecloud_location_ci_only_not_secret
+      LOCATION_DATABASE_SSLMODE: disable
       POSTGIS_IMAGE: postgis/postgis:17-3.5@sha256:83e9999dc3ad8390c210e76130c3a16365ef4f957bb55200d22b7937cfbcb321
     steps:
       - name: Check out repository
@@ -79,7 +92,7 @@ jobs:
               < "$migration"
           done
 
-      - name: Verify ownership and PostGIS behavior
+      - name: Verify schema ownership and PostGIS behavior
         run: |
           docker run --rm --network host \
             -e PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
@@ -91,22 +104,26 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: services/api/go.mod
-          cache-dependency-path: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
 
-      - name: Verify API readiness against running database
+      - name: Download and verify modules
+        working-directory: services/api
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Verify schema-aware API readiness
         shell: bash
         working-directory: services/api
         env:
           LOCATION_API_ADDRESS: 127.0.0.1:18080
-          LOCATION_DATABASE_HOST: 127.0.0.1
-          LOCATION_DATABASE_PORT: "5432"
         run: |
           set -euo pipefail
           go run ./cmd/location-api > "$RUNNER_TEMP/location-api.log" 2>&1 &
           api_pid=$!
           trap 'kill "$api_pid" 2>/dev/null || true' EXIT
 
-          for _ in $(seq 1 30); do
+          for _ in $(seq 1 45); do
             if curl --fail --silent http://127.0.0.1:18080/readyz > /dev/null; then
               exit 0
             fi
@@ -115,6 +132,11 @@ jobs:
 
           cat "$RUNNER_TEMP/location-api.log" >&2
           exit 1
+
+      - name: Verify authenticated user and device isolation
+        env:
+          LOCATION_API_ADDRESS: 127.0.0.1:18081
+        run: bash ./tests/integration/auth-api.sh
 
   web:
     name: TypeScript Web
