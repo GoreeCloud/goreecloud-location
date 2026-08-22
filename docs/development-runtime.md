@@ -1,6 +1,6 @@
 # Development Runtime
 
-GoreeCloud Location remains in the **Development** lifecycle. This runtime exists only to validate the native database and API foundation. It is not a production deployment definition and does not authorize replacing Dawarich, Traccar, or any current GoreeCloud Location service.
+GoreeCloud Location remains in the **Development** lifecycle. This runtime exists only to validate the native database, authentication, authorization, and API foundation. It is not a production deployment definition and does not authorize replacing Dawarich, Traccar, or any current GoreeCloud Location service.
 
 ## Development PostGIS
 
@@ -42,33 +42,48 @@ Stop the database without deleting its named development volume:
 
 ## Migration behavior
 
-Migration `0001_users_devices_locations` creates the initial `schema_migrations` ledger in the same transaction as the ownership-first user/device/location schema. The local migration runner skips a migration only when its exact filename-derived version is already recorded.
+Migration `0001_users_devices_locations` creates the initial `schema_migrations` ledger in the same transaction as the ownership-first user/device/location schema. Migration `0002_auth_devices_preferences` adds hashed user access tokens, device-scoped credentials, and owner-scoped preferences. The local migration runner skips a migration only when its exact filename-derived version is already recorded.
 
-The initial integration test proves that:
+The database integration acceptance proves that:
 
 - PostGIS is installed;
-- migration 0001 is recorded;
+- migrations 0001 and 0002 are recorded;
 - a valid user/device location sample can be stored;
 - a location sample cannot claim another user's device;
+- a device credential cannot claim another user's device;
 - duplicate client sample IDs for one device are rejected; and
 - a real PostGIS geography-distance operation behaves as expected.
 
-All integration fixtures execute inside a transaction that is rolled back.
+Database integration fixtures execute inside a transaction that is rolled back.
 
 ## API health and readiness
 
 `GET /healthz` proves that the HTTP process can answer a request.
 
-`GET /readyz` additionally requires the configured database TCP endpoint to be reachable. During Milestone 0 this is intentionally a dependency-connectivity check rather than a full authenticated SQL/schema check. CI separately performs real PostgreSQL/PostGIS migration and behavior validation. A later persistence milestone will replace the socket-only readiness dependency with the application's authenticated database pool and schema-aware readiness behavior.
+`GET /readyz` now uses the application's authenticated PostgreSQL connection pool. Readiness requires a successful database ping and verifies that migration `0002_auth_devices_preferences` is recorded. A reachable TCP socket without successful database authentication and the required schema is no longer considered ready.
 
-The readiness response never returns database hostnames, credentials, coordinates, user identifiers, or other private data.
+The readiness response never returns database hostnames, credentials, coordinates, user identifiers, device identifiers, or other private data.
+
+## Authenticated runtime acceptance
+
+CI also runs an API-level two-user acceptance scenario against the ephemeral PostGIS service. It uses the administrative bootstrap command to create two independent users, enrolls separate devices, and verifies:
+
+- invalid user credentials fail authentication;
+- each user identity resolves only from its own credential;
+- each user sees only their own devices;
+- a device credential resolves only its own owner and device;
+- one user cannot revoke another user's device through direct object access;
+- user preferences remain isolated between users; and
+- revoking a device invalidates its device credential.
+
+The CI database is disposable. Synthetic acceptance users and credentials are not production data, and credential values are not written to source or ordinary application logs.
 
 ## CI boundary
 
-Pull-request CI now validates three independent areas:
+Pull-request CI validates three independent areas:
 
-- Go API formatting, vetting, tests, and build;
-- a real pinned PostGIS runtime, migration execution, ownership constraints, geospatial behavior, and API readiness against the running database; and
+- Go API and admin-tool dependency verification, formatting, vetting, tests, and builds;
+- a real pinned PostGIS runtime, migration execution, schema ownership constraints, geospatial behavior, schema-aware readiness, and authenticated two-user/device isolation acceptance; and
 - the TypeScript web build.
 
-Green CI proves the reviewed source candidate works in the CI development runtime. It does not prove backup/restore, target-host deployment, native tracking, multi-user application authorization, or production acceptance.
+Green CI proves the reviewed source candidate works in the CI development runtime. It does not prove backup/restore, target-host deployment, native tracking, public-network security, sharing, migration from incumbent location services, Android acceptance, or production acceptance.
