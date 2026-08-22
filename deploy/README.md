@@ -2,11 +2,29 @@
 
 GoreeCloud Location is not yet authorized for production deployment.
 
-The intended deployment model is a self-hosted web/API/worker stack using PostgreSQL with PostGIS, approved GoreeCloud HTTPS publication, private connectivity where required, monitoring, notification integration, and Everkeep-aligned backup/recovery.
+The intended production model remains a self-hosted web/API/worker stack using PostgreSQL with PostGIS, approved GoreeCloud HTTPS publication, private connectivity where required, monitoring, notification integration, and Everkeep-aligned backup/recovery.
 
-Milestone 0 intentionally does not commit a production-looking Compose stack before database credentials, container build definitions, health dependencies, migrations, image pinning, backup behavior, and rollback expectations are implemented and validated together.
+## Development runtime now available
 
-When deployment definitions are introduced, they must:
+`compose.development.yml` is a **development-only** PostGIS runtime. It exists to validate database migrations, ownership constraints, geospatial operations, and API readiness during Milestone 0. It is not the future production stack and must not be used as evidence of a production cutover.
+
+The development database:
+
+- uses `postgis/postgis:17-3.5` pinned to exact manifest digest `sha256:83e9999dc3ad8390c210e76130c3a16365ef4f957bb55200d22b7937cfbcb321`;
+- binds PostgreSQL to loopback by default;
+- obtains its local password from a Docker secret file rather than a committed environment value;
+- stores mutable database state in a named development volume; and
+- exposes a PostgreSQL health check used only for development/runtime validation.
+
+The committed `.env.example` is sanitized. Active `.env` files and `.secrets/` content remain outside Git history.
+
+See `docs/development-runtime.md` for the supported workflow.
+
+## Production boundary
+
+A production Compose stack remains intentionally deferred until database credentials, application container builds, authenticated database readiness, migration forward/recovery behavior, persistent storage ownership, image pinning, backup/restore, observability, release identity, and rollback expectations are designed and validated together.
+
+Future production definitions must:
 
 - keep PostgreSQL and administrative ports off direct public exposure;
 - use secrets outside ordinary revision history;

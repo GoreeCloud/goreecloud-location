@@ -1,0 +1,31 @@
+name: goreecloud-location-development
+
+services:
+  database:
+    # Exact manifest pinned from Docker Hub for postgis/postgis:17-3.5.
+    # This is a development dependency, not a production deployment approval.
+    image: postgis/postgis:17-3.5@sha256:83e9999dc3ad8390c210e76130c3a16365ef4f957bb55200d22b7937cfbcb321
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: goreecloud_location
+      POSTGRES_USER: goreecloud_location
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "127.0.0.1:${LOCATION_DATABASE_PORT:-5432}:5432"
+    volumes:
+      - postgis_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U goreecloud_location -d goreecloud_location"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+secrets:
+  postgres_password:
+    file: ${LOCATION_DATABASE_PASSWORD_FILE:?set LOCATION_DATABASE_PASSWORD_FILE in .env}
+
+volumes:
+  postgis_data:

@@ -7,6 +7,11 @@
 
 BEGIN;
 
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version text PRIMARY KEY,
+    applied_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 CREATE TABLE users (
@@ -64,5 +69,9 @@ CREATE INDEX location_samples_device_captured_at_idx
 
 CREATE INDEX location_samples_position_gist_idx
     ON location_samples USING GIST(position);
+
+INSERT INTO schema_migrations(version)
+VALUES ('0001_users_devices_locations')
+ON CONFLICT (version) DO NOTHING;
 
 COMMIT;

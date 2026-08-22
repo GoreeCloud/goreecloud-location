@@ -42,6 +42,80 @@ jobs:
       - name: Build
         run: go build ./cmd/location-api
 
+  database:
+    name: PostgreSQL and PostGIS
+    runs-on: ubuntu-latest
+    services:
+      postgis:
+        image: postgis/postgis:17-3.5@sha256:83e9999dc3ad8390c210e76130c3a16365ef4f957bb55200d22b7937cfbcb321
+        env:
+          POSTGRES_DB: goreecloud_location
+          POSTGRES_USER: goreecloud_location
+          POSTGRES_PASSWORD: goreecloud_location_ci_only_not_secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U goreecloud_location -d goreecloud_location"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      LOCATION_CI_DATABASE_PASSWORD: goreecloud_location_ci_only_not_secret
+      POSTGIS_IMAGE: postgis/postgis:17-3.5@sha256:83e9999dc3ad8390c210e76130c3a16365ef4f957bb55200d22b7937cfbcb321
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Apply migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in migrations/*.sql; do
+            echo "apply $(basename "$migration")"
+            docker run --rm --network host \
+              -e PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
+              "$POSTGIS_IMAGE" \
+              psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U goreecloud_location -d goreecloud_location \
+              < "$migration"
+          done
+
+      - name: Verify ownership and PostGIS behavior
+        run: |
+          docker run --rm --network host \
+            -e PGPASSWORD="$LOCATION_CI_DATABASE_PASSWORD" \
+            "$POSTGIS_IMAGE" \
+            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U goreecloud_location -d goreecloud_location \
+            < tests/integration/database.sql
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.mod
+
+      - name: Verify API readiness against running database
+        shell: bash
+        working-directory: services/api
+        env:
+          LOCATION_API_ADDRESS: 127.0.0.1:18080
+          LOCATION_DATABASE_HOST: 127.0.0.1
+          LOCATION_DATABASE_PORT: "5432"
+        run: |
+          set -euo pipefail
+          go run ./cmd/location-api > "$RUNNER_TEMP/location-api.log" 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+
+          for _ in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/readyz > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat "$RUNNER_TEMP/location-api.log" >&2
+          exit 1
+
   web:
     name: TypeScript Web
     runs-on: ubuntu-latest
