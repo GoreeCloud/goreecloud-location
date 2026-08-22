@@ -46,7 +46,7 @@ func DatabaseURLFromEnvironment() (string, error) {
 		Scheme: "postgres",
 		User:   url.UserPassword(user, password),
 		Host:   net.JoinHostPort(host, port),
-		Path:   name,
+		Path:   "/" + name,
 	}
 	query := databaseURL.Query()
 	query.Set("sslmode", sslmode)
