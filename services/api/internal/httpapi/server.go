@@ -269,7 +269,7 @@ func (api *API) enrollDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, enrolledDeviceResponse{
-		Device: deviceResponse{ID: deviceID, DisplayName: request.DisplayName, DeviceClass: request.DeviceClass},
+		Device:     deviceResponse{ID: deviceID, DisplayName: request.DisplayName, DeviceClass: request.DeviceClass},
 		Credential: credential,
 	})
 }
