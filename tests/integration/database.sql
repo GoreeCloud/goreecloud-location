@@ -13,6 +13,14 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'migration 0001 is not recorded';
     END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM schema_migrations
+        WHERE version = '0002_auth_devices_preferences'
+    ) THEN
+        RAISE EXCEPTION 'migration 0002 is not recorded';
+    END IF;
 END
 $$;
 
@@ -23,10 +31,51 @@ VALUES
     ('00000000-0000-0000-0000-000000000001', 'Integration User A'),
     ('00000000-0000-0000-0000-000000000002', 'Integration User B');
 
+INSERT INTO user_preferences(user_id)
+VALUES
+    ('00000000-0000-0000-0000-000000000001'),
+    ('00000000-0000-0000-0000-000000000002');
+
+INSERT INTO user_access_tokens(id, user_id, token_hash, label)
+VALUES (
+    '01000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001',
+    repeat('a', 64),
+    'integration user token'
+);
+
 INSERT INTO devices(id, user_id, display_name, device_class)
 VALUES
     ('10000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', 'Device A', 'phone'),
     ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002', 'Device B', 'phone');
+
+INSERT INTO device_credentials(id, user_id, device_id, token_hash, label)
+VALUES (
+    '11000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    repeat('b', 64),
+    'integration device token'
+);
+
+DO $$
+BEGIN
+    BEGIN
+        INSERT INTO device_credentials(id, user_id, device_id, token_hash, label)
+        VALUES (
+            '11000000-0000-0000-0000-000000000002',
+            '00000000-0000-0000-0000-000000000002',
+            '10000000-0000-0000-0000-000000000001',
+            repeat('c', 64),
+            'cross-owner credential'
+        );
+        RAISE EXCEPTION 'cross-user device credential ownership was incorrectly accepted';
+    EXCEPTION
+        WHEN foreign_key_violation THEN
+            NULL;
+    END;
+END
+$$;
 
 INSERT INTO location_samples(
     id,
