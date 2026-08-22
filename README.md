@@ -4,7 +4,7 @@ Privacy-first, self-hosted location history, real-time tracking, geofencing, tra
 
 > **Release lifecycle:** Development
 >
-> GoreeCloud Location is not production-ready. The repository currently contains the native project foundation and early API/schema work.
+> GoreeCloud Location is not production-ready. The repository currently contains the native project foundation and early API/schema/runtime work.
 
 ## Purpose
 
@@ -64,15 +64,31 @@ assets/brand/        Official application icon, logo, and artwork
 services/api/        Versioned HTTP API and ingestion service
 services/worker/     Background processing and derived-data jobs
 migrations/          Authoritative SQL schema migrations
+tests/integration/   Runtime database acceptance checks
+scripts/dev/         Controlled local-development helpers
 docs/                Architecture, security, privacy, and development documentation
-deploy/              Deployment definitions and operational notes
+deploy/              Development deployment definitions and operational notes
 ```
 
 Some directories begin as documented boundaries and will gain implementation as their milestone starts.
 
+## Development runtime
+
+Milestone 0 includes a development-only PostgreSQL/PostGIS runtime so migrations, ownership constraints, geospatial behavior, and API dependency readiness can be tested against a real database without implying production deployment.
+
+Start and validate the local database with:
+
+```bash
+./scripts/dev/database-up.sh
+```
+
+The script creates local protected configuration when needed, starts the digest-pinned development PostGIS container, applies unapplied migrations, and runs database integration acceptance. Stop it with `./scripts/dev/database-down.sh`.
+
+See [docs/development-runtime.md](docs/development-runtime.md) for the exact development boundary, secret handling, image pin, migration behavior, and CI acceptance scope.
+
 ## Initial milestones
 
-1. **Milestone 0 — Foundation:** repository structure, CI, API skeleton, schema, documentation, security baseline.
+1. **Milestone 0 — Foundation:** repository structure, CI, API skeleton, schema, development PostGIS runtime, migration validation, documentation, security baseline.
 2. **Milestone 1 — Users and devices:** authentication, ownership isolation, device enrollment, device-scoped credentials.
 3. **Milestone 2 — Native tracking:** ingestion, Android collector prototype, offline queue, live map.
 4. **Milestone 3 — History:** timeline, paths, filtering, distance and playback foundations.
@@ -82,7 +98,7 @@ Some directories begin as documented boundaries and will gain implementation as 
 
 The first-party API is versioned under `/api/v1/`. Client-supplied user identifiers must never be trusted as ownership authority for device-ingested location samples; ownership is derived from the authenticated device credential.
 
-Initial service endpoints include health/readiness surfaces only. User, device, location, sharing, and geospatial APIs will be introduced through reviewed milestones.
+Initial service endpoints include health and readiness surfaces only. `/healthz` reports process liveness. `/readyz` currently verifies that the configured database endpoint is reachable; CI separately performs authenticated PostgreSQL/PostGIS migration and behavior validation. User, device, location, sharing, and geospatial APIs will be introduced through reviewed milestones.
 
 ## Security and privacy
 
