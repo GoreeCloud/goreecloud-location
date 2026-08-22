@@ -5,6 +5,7 @@
 .env
 .env.*
 !.env.example
+.secrets/
 *.pem
 *.key
 *.p12
