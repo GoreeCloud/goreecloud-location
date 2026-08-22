@@ -1,27 +1,28 @@
 // GoreeCloud Location API
 //
-// Milestone 0 intentionally exposes only non-sensitive health endpoints. User,
-// device, location, sharing, and administrative APIs are added only after their
-// authorization and data-ownership boundaries are implemented and tested.
+// Milestone 1 introduces authenticated user and device-management surfaces while
+// keeping location ingestion disabled until its ownership and validation boundary
+// is implemented in Milestone 2.
 package main
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/GoreeCloud/goreecloud-location/services/api/internal/config"
+	"github.com/GoreeCloud/goreecloud-location/services/api/internal/httpapi"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
-	defaultAddress      = ":8080"
-	defaultDatabasePort = "5432"
-	readinessTimeout    = 2 * time.Second
+	defaultAddress   = ":8080"
+	readinessTimeout = 2 * time.Second
 )
 
 type healthResponse struct {
@@ -33,7 +34,23 @@ type readinessCheck func(context.Context) error
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	server := newServer(addressFromEnvironment(), logger, databaseReadinessFromEnvironment())
+	databaseURL, err := config.DatabaseURLFromEnvironment()
+	if err != nil {
+		logger.Error("invalid database configuration", "error", err)
+		os.Exit(1)
+	}
+
+	pool, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		logger.Error("could not initialize database pool", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	api := httpapi.New(pool, logger)
+	server := newServer(addressFromEnvironment(), logger, func(ctx context.Context) error {
+		return httpapi.Readiness(ctx, pool)
+	}, api)
 
 	logger.Info("starting GoreeCloud Location API", "address", server.Addr)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
@@ -42,10 +59,13 @@ func main() {
 	}
 }
 
-func newServer(address string, logger *slog.Logger, readiness readinessCheck) *http.Server {
+func newServer(address string, logger *slog.Logger, readiness readinessCheck, api http.Handler) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", healthHandler)
 	mux.HandleFunc("GET /readyz", readinessHandler(logger, readiness))
+	if api != nil {
+		mux.Handle("/api/v1/", api)
+	}
 
 	return &http.Server{
 		Addr:              address,
@@ -63,26 +83,6 @@ func addressFromEnvironment() string {
 		return address
 	}
 	return defaultAddress
-}
-
-func databaseReadinessFromEnvironment() readinessCheck {
-	host := strings.TrimSpace(os.Getenv("LOCATION_DATABASE_HOST"))
-	port := strings.TrimSpace(os.Getenv("LOCATION_DATABASE_PORT"))
-	if port == "" {
-		port = defaultDatabasePort
-	}
-
-	return func(ctx context.Context) error {
-		if host == "" {
-			return errors.New("database host is not configured")
-		}
-
-		connection, err := (&net.Dialer{}).DialContext(ctx, "tcp", net.JoinHostPort(host, port))
-		if err != nil {
-			return fmt.Errorf("database socket unavailable: %w", err)
-		}
-		return connection.Close()
-	}
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
