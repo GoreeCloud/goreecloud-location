@@ -59,7 +59,7 @@ jobs:
           go build ./cmd/location-migrate
 
   database:
-    name: PostgreSQL, PostGIS, and Auth Isolation
+    name: PostgreSQL, PostGIS, Auth, and Tracking Isolation
     runs-on: ubuntu-latest
     services:
       postgis:
@@ -139,6 +139,11 @@ jobs:
         env:
           LOCATION_API_ADDRESS: 127.0.0.1:18081
         run: bash ./tests/integration/auth-api.sh
+
+      - name: Verify native tracking isolation and controls
+        env:
+          LOCATION_API_ADDRESS: 127.0.0.1:18082
+        run: bash ./tests/integration/tracking-api.sh
 
   web:
     name: TypeScript Web
