@@ -1,8 +1,8 @@
 // GoreeCloud Location API
 //
-// Milestone 1 introduces authenticated user and device-management surfaces while
-// keeping location ingestion disabled until its ownership and validation boundary
-// is implemented in Milestone 2.
+// Milestone 2 adds device-authenticated location ingestion and owner-scoped
+// location history/live reads while preserving the Milestone 1 account and
+// device-management authorization boundary.
 package main
 
 import (
@@ -59,7 +59,9 @@ func main() {
 	}
 	defer pool.Close()
 
-	api := httpapi.New(pool, logger)
+	accountAPI := httpapi.New(pool, logger)
+	trackingAPI := httpapi.NewTracking(pool, logger)
+	api := combinedAPIHandler(accountAPI, trackingAPI)
 	server := newServer(addressFromEnvironment(), logger, func(ctx context.Context) error {
 		if err := httpapi.Readiness(ctx, pool); err != nil {
 			var connectedDatabase string
@@ -76,6 +78,17 @@ func main() {
 		logger.Error("location API stopped unexpectedly", "error", err)
 		os.Exit(1)
 	}
+}
+
+func combinedAPIHandler(accountAPI, trackingAPI http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/locations", "/api/v1/live":
+			trackingAPI.ServeHTTP(w, r)
+		default:
+			accountAPI.ServeHTTP(w, r)
+		}
+	})
 }
 
 func newServer(address string, logger *slog.Logger, readiness readinessCheck, api http.Handler) *http.Server {
