@@ -155,12 +155,21 @@ status="$(curl --silent --output "$tmp_dir/conflict-a.json" --write-out '%{http_
   "http://$LOCATION_API_ADDRESS/api/v1/locations")"
 [[ "$status" == "409" ]] || { echo "conflicting sample retry was not rejected" >&2; exit 1; }
 
+invalid_sample_payload="$(printf '{"client_sample_id":"tracking-a-invalid","captured_at":"%s","latitude":91,"longitude":-90.0715}' "$captured_a")"
 status="$(curl --silent --output "$tmp_dir/invalid-sample.json" --write-out '%{http_code}' \
   -H "Authorization: Bearer $device_a_token" \
   -H 'Content-Type: application/json' \
-  -d "$(printf '{\"client_sample_id\":\"tracking-a-invalid\",\"captured_at\":\"%s\",\"latitude\":91,\"longitude\":-90.0715}' "$captured_a")" \
+  -d "$invalid_sample_payload" \
   "http://$LOCATION_API_ADDRESS/api/v1/locations")"
 [[ "$status" == "400" ]] || { echo "invalid coordinate sample was not rejected" >&2; exit 1; }
+
+missing_coordinate_payload="$(printf '{"client_sample_id":"tracking-a-missing-coordinate","captured_at":"%s","longitude":-90.0715}' "$captured_a")"
+status="$(curl --silent --output "$tmp_dir/missing-coordinate.json" --write-out '%{http_code}' \
+  -H "Authorization: Bearer $device_a_token" \
+  -H 'Content-Type: application/json' \
+  -d "$missing_coordinate_payload" \
+  "http://$LOCATION_API_ADDRESS/api/v1/locations")"
+[[ "$status" == "400" ]] || { echo "missing coordinate sample was not rejected" >&2; exit 1; }
 
 curl --fail --silent \
   -H "Authorization: Bearer $user_a_token" \
