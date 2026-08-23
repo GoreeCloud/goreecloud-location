@@ -26,8 +26,8 @@ const (
 type ingestLocationRequest struct {
 	ClientSampleID string     `json:"client_sample_id"`
 	CapturedAt     time.Time  `json:"captured_at"`
-	Latitude       float64    `json:"latitude"`
-	Longitude      float64    `json:"longitude"`
+	Latitude       *float64   `json:"latitude"`
+	Longitude      *float64   `json:"longitude"`
 	AccuracyM      *float64   `json:"accuracy_m,omitempty"`
 	AltitudeM      *float64   `json:"altitude_m,omitempty"`
 	SpeedMPS       *float64   `json:"speed_mps,omitempty"`
@@ -202,7 +202,7 @@ func insertLocation(ctx context.Context, tx pgx.Tx, id string, p principal, requ
 			server_received_at, ST_Y(position::geometry), ST_X(position::geometry),
 			accuracy_m, altitude_m, speed_mps, bearing_deg, battery_percent, source
 	`, id, p.UserID, p.DeviceID, request.ClientSampleID, request.CapturedAt,
-		request.Longitude, request.Latitude, request.AccuracyM, request.AltitudeM,
+		*request.Longitude, *request.Latitude, request.AccuracyM, request.AltitudeM,
 		request.SpeedMPS, request.BearingDeg, request.BatteryPercent))
 }
 
@@ -365,7 +365,10 @@ func normalizeAndValidateLocation(request *ingestLocationRequest, now time.Time)
 	if request.CapturedAt.After(now.UTC().Add(maxFutureSampleSkew)) {
 		return errors.New("captured_at is too far in the future")
 	}
-	if !finiteInRange(request.Latitude, -90, 90) || !finiteInRange(request.Longitude, -180, 180) {
+	if request.Latitude == nil || request.Longitude == nil {
+		return errors.New("coordinates are required")
+	}
+	if !finiteInRange(*request.Latitude, -90, 90) || !finiteInRange(*request.Longitude, -180, 180) {
 		return errors.New("invalid coordinates")
 	}
 	if request.AccuracyM != nil && !finiteInRange(*request.AccuracyM, 0, 1_000_000) {
@@ -439,11 +442,12 @@ func parseHistoryOptions(values url.Values) (historyOptions, error) {
 }
 
 func sameLocationPayload(location locationResponse, request ingestLocationRequest) bool {
-	return location.DeviceID != "" &&
+	return request.Latitude != nil && request.Longitude != nil &&
+		location.DeviceID != "" &&
 		location.ClientSampleID == request.ClientSampleID &&
 		location.CapturedAt.Equal(request.CapturedAt) &&
-		location.Latitude == request.Latitude &&
-		location.Longitude == request.Longitude &&
+		location.Latitude == *request.Latitude &&
+		location.Longitude == *request.Longitude &&
 		sameOptionalFloat(location.AccuracyM, request.AccuracyM) &&
 		sameOptionalFloat(location.AltitudeM, request.AltitudeM) &&
 		sameOptionalFloat(location.SpeedMPS, request.SpeedMPS) &&
