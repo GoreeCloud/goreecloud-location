@@ -54,21 +54,23 @@ func TestNormalizeAndValidateLocationRejectsInvalidSamples(t *testing.T) {
 	}
 
 	tests := map[string]func(*ingestLocationRequest){
-		"blank client sample id":     func(request *ingestLocationRequest) { request.ClientSampleID = "   " },
-		"oversized client sample id": func(request *ingestLocationRequest) { request.ClientSampleID = strings.Repeat("a", maxClientSampleIDBytes+1) },
-		"control character":           func(request *ingestLocationRequest) { request.ClientSampleID = "sample\n001" },
-		"zero timestamp":              func(request *ingestLocationRequest) { request.CapturedAt = time.Time{} },
-		"future timestamp":            func(request *ingestLocationRequest) { request.CapturedAt = now.Add(maxFutureSampleSkew + time.Second) },
-		"missing latitude":            func(request *ingestLocationRequest) { request.Latitude = nil },
-		"missing longitude":           func(request *ingestLocationRequest) { request.Longitude = nil },
-		"latitude":                    func(request *ingestLocationRequest) { value := 90.1; request.Latitude = &value },
-		"longitude":                   func(request *ingestLocationRequest) { value := -180.1; request.Longitude = &value },
-		"nan coordinate":              func(request *ingestLocationRequest) { value := math.NaN(); request.Latitude = &value },
-		"negative accuracy":           func(request *ingestLocationRequest) { value := -1.0; request.AccuracyM = &value },
-		"infinite altitude":           func(request *ingestLocationRequest) { value := math.Inf(1); request.AltitudeM = &value },
-		"negative speed":              func(request *ingestLocationRequest) { value := -0.1; request.SpeedMPS = &value },
-		"bearing 360":                 func(request *ingestLocationRequest) { value := 360.0; request.BearingDeg = &value },
-		"battery over 100":            func(request *ingestLocationRequest) { value := int16(101); request.BatteryPercent = &value },
+		"blank client sample id": func(request *ingestLocationRequest) { request.ClientSampleID = "   " },
+		"oversized client sample id": func(request *ingestLocationRequest) {
+			request.ClientSampleID = strings.Repeat("a", maxClientSampleIDBytes+1)
+		},
+		"control character": func(request *ingestLocationRequest) { request.ClientSampleID = "sample\n001" },
+		"zero timestamp":    func(request *ingestLocationRequest) { request.CapturedAt = time.Time{} },
+		"future timestamp":  func(request *ingestLocationRequest) { request.CapturedAt = now.Add(maxFutureSampleSkew + time.Second) },
+		"missing latitude":  func(request *ingestLocationRequest) { request.Latitude = nil },
+		"missing longitude": func(request *ingestLocationRequest) { request.Longitude = nil },
+		"latitude":          func(request *ingestLocationRequest) { value := 90.1; request.Latitude = &value },
+		"longitude":         func(request *ingestLocationRequest) { value := -180.1; request.Longitude = &value },
+		"nan coordinate":    func(request *ingestLocationRequest) { value := math.NaN(); request.Latitude = &value },
+		"negative accuracy": func(request *ingestLocationRequest) { value := -1.0; request.AccuracyM = &value },
+		"infinite altitude": func(request *ingestLocationRequest) { value := math.Inf(1); request.AltitudeM = &value },
+		"negative speed":    func(request *ingestLocationRequest) { value := -0.1; request.SpeedMPS = &value },
+		"bearing 360":       func(request *ingestLocationRequest) { value := 360.0; request.BearingDeg = &value },
+		"battery over 100":  func(request *ingestLocationRequest) { value := int16(101); request.BatteryPercent = &value },
 	}
 
 	for name, mutate := range tests {
