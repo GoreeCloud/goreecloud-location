@@ -24,15 +24,15 @@ const (
 )
 
 type ingestLocationRequest struct {
-	ClientSampleID string     `json:"client_sample_id"`
-	CapturedAt     time.Time  `json:"captured_at"`
-	Latitude       *float64   `json:"latitude"`
-	Longitude      *float64   `json:"longitude"`
-	AccuracyM      *float64   `json:"accuracy_m,omitempty"`
-	AltitudeM      *float64   `json:"altitude_m,omitempty"`
-	SpeedMPS       *float64   `json:"speed_mps,omitempty"`
-	BearingDeg     *float64   `json:"bearing_deg,omitempty"`
-	BatteryPercent *int16     `json:"battery_percent,omitempty"`
+	ClientSampleID string    `json:"client_sample_id"`
+	CapturedAt     time.Time `json:"captured_at"`
+	Latitude       *float64  `json:"latitude"`
+	Longitude      *float64  `json:"longitude"`
+	AccuracyM      *float64  `json:"accuracy_m,omitempty"`
+	AltitudeM      *float64  `json:"altitude_m,omitempty"`
+	SpeedMPS       *float64  `json:"speed_mps,omitempty"`
+	BearingDeg     *float64  `json:"bearing_deg,omitempty"`
+	BatteryPercent *int16    `json:"battery_percent,omitempty"`
 }
 
 type locationResponse struct {
