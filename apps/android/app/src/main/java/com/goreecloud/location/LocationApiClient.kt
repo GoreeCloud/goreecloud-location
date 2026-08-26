@@ -118,7 +118,11 @@ class LocationApiClient(private val context: Context) {
 
 private data class ApiResponse(val code: Int, val body: String) {
     fun errorCode(): String? = try {
-        if (body.isBlank()) null else JSONObject(body).optString("error").ifBlank { null }
+        if (body.isBlank()) {
+            null
+        } else {
+            JSONObject(body).optString("error").takeIf { it.isNotBlank() }
+        }
     } catch (_: Exception) {
         null
     }
