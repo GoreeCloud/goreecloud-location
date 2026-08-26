@@ -8,16 +8,25 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.BatteryManager
 import android.os.Build
 import android.os.IBinder
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.Executors
 
 class LocationCollectorService : Service(), LocationListener {
     private lateinit var locationManager: LocationManager
+    private lateinit var queue: EncryptedSampleQueue
+    private lateinit var api: LocationApiClient
+    private val syncExecutor = Executors.newSingleThreadExecutor()
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         locationManager = getSystemService(LocationManager::class.java)
+        queue = EncryptedSampleQueue(this)
+        api = LocationApiClient(this)
     }
 
     override fun onStartCommand(intent: android.content.Intent?, flags: Int, startId: Int): Int {
@@ -25,10 +34,16 @@ class LocationCollectorService : Service(), LocationListener {
             stopSelf()
             return START_NOT_STICKY
         }
+        if (ProtectedCredentialStore.load(this) == null) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
 
         startForeground(NOTIFICATION_ID, buildNotification())
         isRunning = true
+        pendingSampleCount = queue.pendingCount()
         requestUpdates()
+        requestSync()
         return START_STICKY
     }
 
@@ -44,13 +59,51 @@ class LocationCollectorService : Service(), LocationListener {
     override fun onLocationChanged(location: Location) {
         latestObservedAtMillis = System.currentTimeMillis()
         latestAccuracyMeters = if (location.hasAccuracy()) location.accuracy else null
-        // Coordinates are intentionally retained only in process memory for this foundation slice.
         latestLatitude = location.latitude
         latestLongitude = location.longitude
+
+        val battery = getSystemService(BatteryManager::class.java)
+            .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            .takeIf { it in 0..100 }
+        val sample = PendingLocationSample(
+            clientSampleId = UUID.randomUUID().toString(),
+            capturedAt = Instant.ofEpochMilli(location.time).toString(),
+            latitude = location.latitude,
+            longitude = location.longitude,
+            accuracyM = if (location.hasAccuracy()) location.accuracy.toDouble() else null,
+            altitudeM = if (location.hasAltitude()) location.altitude else null,
+            speedMps = if (location.hasSpeed()) location.speed.toDouble() else null,
+            bearingDeg = if (location.hasBearing()) location.bearing.toDouble() else null,
+            batteryPercent = battery,
+        )
+
+        try {
+            queue.enqueue(sample)
+            pendingSampleCount = queue.pendingCount()
+            syncState = "queued"
+            requestSync()
+        } catch (_: Exception) {
+            syncState = "queue_error"
+        }
+    }
+
+    private fun requestSync() {
+        syncExecutor.execute {
+            try {
+                val result = api.syncPending(queue)
+                pendingSampleCount = result.remaining
+                syncState = result.state
+                if (result.state == "device_auth_required") stopSelf()
+            } catch (_: Exception) {
+                pendingSampleCount = queue.pendingCount()
+                syncState = "sync_error"
+            }
+        }
     }
 
     override fun onDestroy() {
         locationManager.removeUpdates(this)
+        syncExecutor.shutdown()
         latestLatitude = null
         latestLongitude = null
         latestAccuracyMeters = null
@@ -100,6 +153,10 @@ class LocationCollectorService : Service(), LocationListener {
         @Volatile var latestLongitude: Double? = null
             private set
         @Volatile var latestAccuracyMeters: Float? = null
+            private set
+        @Volatile var pendingSampleCount: Int = 0
+            private set
+        @Volatile var syncState: String = "idle"
             private set
     }
 }
