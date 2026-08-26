@@ -41,8 +41,9 @@ type LiveDevice = {
 const storageKey = "goreecloud-location-user-token";
 const refreshIntervalMs = 30_000;
 
-const app = document.querySelector<HTMLElement>("#app");
-if (!app) throw new Error("GoreeCloud Location application root was not found.");
+const applicationRoot = document.querySelector<HTMLElement>("#app");
+if (!applicationRoot) throw new Error("GoreeCloud Location application root was not found.");
+const app: HTMLElement = applicationRoot;
 
 let token = sessionStorage.getItem(storageKey) ?? "";
 let refreshTimer: number | undefined;
