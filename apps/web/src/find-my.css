@@ -1,0 +1,298 @@
+/* GoreeCloud Location — Find My Development surface, Glaze UI 1.5.0.
+ * Ordinary device/recovery content remains solid/raised. No external map, font,
+ * analytics, icon, or tile dependency is introduced by this layer.
+ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.find-my-section {
+  margin-top: clamp(3rem, 7vw, 6rem);
+  padding-top: 1.75rem;
+  border-top: 1px solid rgba(22, 32, 42, .08);
+  scroll-margin-top: 1rem;
+}
+
+.find-my-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.find-my-heading h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  letter-spacing: -.045em;
+}
+
+.find-my-intro {
+  max-width: 760px;
+  margin: .8rem 0 0;
+  color: #65727c;
+  line-height: 1.55;
+}
+
+.find-search input {
+  min-width: min(290px, 38vw);
+  min-height: 44px;
+  padding: .75rem .9rem;
+  border: 1px solid rgba(22, 32, 42, .12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .72);
+  color: inherit;
+}
+
+.find-search input:focus-visible,
+.find-map-pin:focus-visible {
+  outline: 3px solid #346fa7;
+  outline-offset: 3px;
+}
+
+.find-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .55rem;
+  margin-top: 1.25rem;
+}
+
+.find-summary > div {
+  display: grid;
+  gap: .18rem;
+  padding: .85rem .9rem;
+  border: 1px solid rgba(22, 32, 42, .07);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .68);
+}
+
+.find-summary strong { font-size: 1.25rem; }
+.find-summary span { color: #75818a; font-size: .72rem; }
+
+.find-map-card {
+  overflow: hidden;
+  margin-top: 1rem;
+  border: 1px solid rgba(22, 32, 42, .08);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .7);
+  box-shadow: 0 16px 55px rgba(24, 34, 43, .05);
+}
+
+.find-map-card .map-toolbar { border-bottom: 1px solid rgba(22, 32, 42, .07); }
+.find-map-card .map-toolbar h3 { margin: 0; font-size: 1.15rem; letter-spacing: -.025em; }
+
+.find-map-stage {
+  position: relative;
+  min-height: clamp(300px, 42vh, 500px);
+  overflow: hidden;
+  background: linear-gradient(145deg, #dce5e8, #eef3f4);
+}
+
+.find-map-grid {
+  position: absolute;
+  inset: 0;
+  opacity: .65;
+  background-image:
+    linear-gradient(rgba(84, 105, 116, .11) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(84, 105, 116, .11) 1px, transparent 1px),
+    linear-gradient(rgba(84, 105, 116, .05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(84, 105, 116, .05) 1px, transparent 1px);
+  background-size: 25% 25%, 25% 25%, 5% 5%, 5% 5%;
+}
+
+.find-map-pin {
+  --pin-x: 50%;
+  --pin-y: 50%;
+  position: absolute;
+  left: var(--pin-x);
+  top: var(--pin-y);
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  transform: translate(-50%, -50%);
+  border: 3px solid rgba(255, 255, 255, .86);
+  border-radius: 50%;
+  box-shadow: 0 8px 22px rgba(31, 45, 54, .18);
+  background: #334a5c;
+  color: white;
+}
+
+.find-map-pin.good { background: #2d835f; }
+.find-map-pin.warn { background: #9b7029; }
+.find-map-pin.stale { background: #7a6853; }
+.find-map-pin.offline { background: #5f6972; }
+
+.find-map-note {
+  margin: 0;
+  padding: .8rem 1rem;
+  border-top: 1px solid rgba(22, 32, 42, .07);
+  color: #73808a;
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.find-results-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1.25rem 0 .7rem;
+  font-size: .8rem;
+}
+
+.find-results-heading span { color: #74808a; }
+
+.find-device-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .8rem;
+}
+
+.find-device-card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid rgba(22, 32, 42, .075);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .74);
+  box-shadow: 0 10px 35px rgba(24, 34, 43, .04);
+}
+
+.find-device-card[hidden] { display: none; }
+
+.find-device-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.find-device-heading h3 { margin: 0; font-size: 1rem; }
+.find-state-detail { margin: .55rem 0 0; color: #697681; font-size: .78rem; line-height: 1.45; }
+
+.state-pill.stale { background: rgba(126, 101, 70, .1); color: #725a3e; }
+.state-pill.offline { background: rgba(85, 96, 105, .1); color: #59636b; }
+
+.find-device-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .45rem;
+  margin: .85rem 0 0;
+}
+
+.find-device-facts > div {
+  min-width: 0;
+  padding: .6rem;
+  border-radius: 11px;
+  background: rgba(22, 32, 42, .035);
+}
+
+.find-device-facts dt { color: #7b8790; font-size: .62rem; }
+.find-device-facts dd {
+  overflow: hidden;
+  margin: .22rem 0 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .73rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.recovery-panel {
+  margin-top: .9rem;
+  padding: .8rem;
+  border: 1px solid rgba(22, 32, 42, .065);
+  border-radius: 14px;
+  background: rgba(22, 32, 42, .025);
+}
+
+.recovery-panel > div:first-child { display: grid; gap: .12rem; }
+.recovery-panel strong { font-size: .78rem; }
+.recovery-panel span, .recovery-panel p { color: #74808a; font-size: .7rem; }
+.recovery-panel p { margin: .65rem 0 0; line-height: 1.45; }
+.recovery-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .65rem; }
+.recovery-actions button {
+  min-height: 40px;
+  padding: .55rem .7rem;
+  border: 1px solid rgba(22, 32, 42, .08);
+  border-radius: 11px;
+  background: rgba(22, 32, 42, .04);
+  color: #68747e;
+}
+.recovery-actions button:disabled { cursor: not-allowed; opacity: .7; }
+
+@media (max-width: 980px) {
+  .find-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .find-device-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 590px) {
+  .find-my-heading { align-items: stretch; flex-direction: column; }
+  .find-search input { width: 100%; min-width: 0; }
+  .find-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .find-results-heading { flex-direction: column; gap: .25rem; }
+  .find-device-facts { grid-template-columns: 1fr; }
+}
+
+@media (prefers-color-scheme: dark) {
+  .find-my-section { border-color: rgba(255, 255, 255, .07); }
+  .find-my-intro, .find-state-detail, .find-results-heading span, .find-map-note,
+  .recovery-panel span, .recovery-panel p { color: #aeb8c0; }
+  .find-search input,
+  .find-summary > div,
+  .find-map-card,
+  .find-device-card {
+    border-color: rgba(255, 255, 255, .08);
+    background: rgba(25, 32, 39, .78);
+  }
+  .find-map-card .map-toolbar, .find-map-note { border-color: rgba(255, 255, 255, .065); }
+  .find-map-stage { background: linear-gradient(145deg, #202a30, #172027); }
+  .find-map-grid {
+    background-image:
+      linear-gradient(rgba(194, 211, 218, .09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(194, 211, 218, .09) 1px, transparent 1px),
+      linear-gradient(rgba(194, 211, 218, .04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(194, 211, 218, .04) 1px, transparent 1px);
+  }
+  .find-summary > div span, .find-device-facts dt { color: #aeb8c0; }
+  .find-device-facts > div, .recovery-panel { background: rgba(255, 255, 255, .045); }
+  .recovery-actions button { border-color: rgba(255, 255, 255, .08); background: rgba(255, 255, 255, .055); color: #b5c0c8; }
+  .state-pill.stale { background: rgba(203, 158, 103, .14); color: #d7b78d; }
+  .state-pill.offline { background: rgba(255, 255, 255, .075); color: #b4bec6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .find-map-pin { transition: none; }
+}
+
+@media (prefers-contrast: more) {
+  .find-search input,
+  .find-summary > div,
+  .find-map-card,
+  .find-device-card,
+  .recovery-panel { border-width: 2px; }
+}
+
+@media (forced-colors: active) {
+  .find-search input,
+  .find-summary > div,
+  .find-map-card,
+  .find-device-card,
+  .recovery-panel,
+  .recovery-actions button,
+  .find-map-pin {
+    forced-color-adjust: auto;
+    background: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    box-shadow: none;
+  }
+  .find-map-pin:focus-visible, .find-search input:focus-visible { outline: 3px solid Highlight; }
+}
