@@ -20,6 +20,8 @@ class LocationCollectorService : Service(), LocationListener {
     private lateinit var queue: EncryptedSampleQueue
     private lateinit var api: LocationApiClient
     private val syncExecutor = Executors.newSingleThreadExecutor()
+    private val syncGate = SingleFlightSyncGate()
+    private var retryAttempt = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -35,6 +37,7 @@ class LocationCollectorService : Service(), LocationListener {
             return START_NOT_STICKY
         }
         if (ProtectedCredentialStore.load(this) == null) {
+            RetryJobService.cancel(this)
             stopSelf()
             return START_NOT_STICKY
         }
@@ -89,14 +92,34 @@ class LocationCollectorService : Service(), LocationListener {
 
     private fun requestSync() {
         syncExecutor.execute {
-            try {
-                val result = api.syncPending(queue)
+            syncGate.runIfAvailable {
+                val result = try {
+                    api.syncPending(queue)
+                } catch (_: Exception) {
+                    pendingSampleCount = queue.pendingCount()
+                    syncState = "sync_error"
+                    RetryJobService.schedule(this, SyncOutcome.TRANSIENT_SERVER_FAILURE, retryAttempt)
+                    retryAttempt = (retryAttempt + 1).coerceAtMost(31)
+                    return@runIfAvailable
+                }
+
                 pendingSampleCount = result.remaining
                 syncState = result.state
-                if (result.state == "device_auth_required") stopSelf()
-            } catch (_: Exception) {
-                pendingSampleCount = queue.pendingCount()
-                syncState = "sync_error"
+                val outcome = when {
+                    result.state == "ok" -> SyncOutcome.SUCCESS
+                    result.state == "offline" -> SyncOutcome.OFFLINE
+                    result.state == "device_auth_required" || result.state == "not_enrolled" ->
+                        SyncOutcome.AUTHENTICATION_REVOKED
+                    result.state.startsWith("server_5") -> SyncOutcome.TRANSIENT_SERVER_FAILURE
+                    else -> SyncOutcome.MALFORMED_LOCAL_RECORD
+                }
+
+                if (outcome == SyncOutcome.SUCCESS) retryAttempt = 0
+                RetryJobService.schedule(this, outcome, retryAttempt)
+                if (outcome == SyncOutcome.OFFLINE || outcome == SyncOutcome.TRANSIENT_SERVER_FAILURE) {
+                    retryAttempt = (retryAttempt + 1).coerceAtMost(31)
+                }
+                if (outcome == SyncOutcome.AUTHENTICATION_REVOKED) stopSelf()
             }
         }
     }
