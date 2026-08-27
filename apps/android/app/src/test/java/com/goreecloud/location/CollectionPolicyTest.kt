@@ -1,6 +1,7 @@
 package com.goreecloud.location
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class CollectionPolicyTest {
@@ -15,8 +16,8 @@ class CollectionPolicyTest {
         )
 
         profiles.forEach { profile ->
-            assert(profile.minTimeMs >= CollectionProfilePolicy.BALANCED.minTimeMs)
-            assert(profile.minDistanceM >= CollectionProfilePolicy.BALANCED.minDistanceM)
+            assertTrue(profile.minTimeMs >= CollectionProfilePolicy.BALANCED.minTimeMs)
+            assertTrue(profile.minDistanceM >= CollectionProfilePolicy.BALANCED.minDistanceM)
         }
     }
 
