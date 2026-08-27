@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -19,6 +21,8 @@ import java.util.concurrent.Executors
 class MainActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var detailText: TextView
+    private lateinit var diagnosticText: TextView
+    private lateinit var diagnosticPolicyText: TextView
     private lateinit var enrollmentText: TextView
     private lateinit var apiUrlInput: EditText
     private lateinit var userCredentialInput: EditText
@@ -27,6 +31,13 @@ class MainActivity : Activity() {
     private lateinit var syncButton: Button
     private lateinit var forgetButton: Button
     private val networkExecutor = Executors.newSingleThreadExecutor()
+    private val uiHandler = Handler(Looper.getMainLooper())
+    private val diagnosticRefresh = object : Runnable {
+        override fun run() {
+            renderState()
+            uiHandler.postDelayed(this, DIAGNOSTIC_REFRESH_MS)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,10 +47,17 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        renderState()
+        uiHandler.removeCallbacks(diagnosticRefresh)
+        diagnosticRefresh.run()
+    }
+
+    override fun onPause() {
+        uiHandler.removeCallbacks(diagnosticRefresh)
+        super.onPause()
     }
 
     override fun onDestroy() {
+        uiHandler.removeCallbacks(diagnosticRefresh)
         networkExecutor.shutdown()
         super.onDestroy()
     }
@@ -118,6 +136,25 @@ class MainActivity : Activity() {
         }
         root.addView(detailText)
 
+        root.addView(TextView(this).apply {
+            text = "Privacy-safe diagnostics"
+            textSize = 14f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(0xFF52606D.toInt())
+            setPadding(0, 0, 0, dp(4))
+        })
+        diagnosticText = TextView(this).apply {
+            textSize = 13f
+            setTextColor(0xFF52606D.toInt())
+        }
+        root.addView(diagnosticText)
+        diagnosticPolicyText = TextView(this).apply {
+            textSize = 12f
+            setTextColor(0xFF788694.toInt())
+            setPadding(0, dp(4), 0, dp(16))
+        }
+        root.addView(diagnosticPolicyText)
+
         toggleButton = Button(this).apply { setOnClickListener { toggleTracking() } }
         root.addView(toggleButton, fullWidth())
 
@@ -138,7 +175,7 @@ class MainActivity : Activity() {
         root.addView(forgetButton, fullWidth())
 
         root.addView(TextView(this).apply {
-            text = "Security boundary: the user credential is never persisted by this screen. Local HTTP is accepted only for emulator/localhost development; other endpoints require HTTPS. Pending coordinates remain encrypted at rest until acknowledged by the server."
+            text = "Security boundary: the user credential is never persisted by this screen. Local HTTP is accepted only for emulator/localhost development; other endpoints require HTTPS. Pending coordinates remain encrypted at rest until acknowledged by the server. Diagnostics intentionally exclude coordinates, credentials, route history, host details, and sample payloads."
             textSize = 12f
             setTextColor(0xFF788694.toInt())
             setPadding(0, dp(20), 0, 0)
@@ -251,14 +288,26 @@ class MainActivity : Activity() {
         statusText.text = if (running) "Tracking is active" else "Tracking is stopped"
         val sampleAge = LocationCollectorService.latestObservedAtMillis
         detailText.text = message ?: if (running) {
-            val observation = if (sampleAge == null) "waiting for a location observation" else {
+            if (sampleAge == null) {
+                "Waiting for the first location observation."
+            } else {
                 val seconds = ((System.currentTimeMillis() - sampleAge).coerceAtLeast(0L) / 1000L)
-                "latest observation ${seconds}s ago"
+                "Latest observation ${seconds}s ago."
             }
-            "$observation • ${LocationCollectorService.pendingSampleCount} encrypted pending • sync ${LocationCollectorService.syncState}"
         } else {
-            "$queueCount encrypted sample(s) pending."
+            "Collector is not requesting location updates."
         }
+
+        val diagnostics = TrackingDiagnostics(
+            collectionProfile = LocationCollectorService.currentCollectionProfile,
+            intervalSeconds = LocationCollectorService.currentCollectionIntervalSeconds,
+            distanceMeters = LocationCollectorService.currentCollectionDistanceMeters,
+            encryptedPendingSamples = if (running) LocationCollectorService.pendingSampleCount else queueCount,
+            syncState = if (running) LocationCollectorService.syncState else "idle",
+        )
+        diagnosticText.text = diagnostics.summary()
+        diagnosticPolicyText.text = diagnostics.policySummary()
+
         toggleButton.text = if (running) "Stop tracking" else "Start tracking"
         toggleButton.isEnabled = enrolled
         syncButton.isEnabled = enrolled
@@ -273,5 +322,6 @@ class MainActivity : Activity() {
 
     companion object {
         private const val REQUEST_LOCATION_PERMISSIONS = 1001
+        private const val DIAGNOSTIC_REFRESH_MS = 5_000L
     }
 }

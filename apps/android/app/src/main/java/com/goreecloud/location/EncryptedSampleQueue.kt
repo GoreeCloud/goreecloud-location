@@ -141,8 +141,11 @@ class EncryptedSampleQueue(private val context: Context) {
 
     companion object {
         private const val KEY_ALIAS = "goreecloud_location_sample_queue_v1"
-        private const val MAX_PENDING_SAMPLES = 1_000
-        private val MAX_AGE: Duration = Duration.ofDays(7)
+        const val MAX_PENDING_SAMPLES = 1_000
+        val MAX_AGE: Duration = Duration.ofDays(7)
+
+        fun retentionPolicySummary(): String =
+            "up to $MAX_PENDING_SAMPLES encrypted samples / ${MAX_AGE.toDays()} days"
     }
 }
 
