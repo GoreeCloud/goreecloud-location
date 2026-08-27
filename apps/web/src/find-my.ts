@@ -102,7 +102,7 @@ function renderMapPin(entry: FindMyLiveDevice, index: number): string {
   if (!entry.location || entry.device.revoked_at) return "";
   const position = mapPosition(entry.location);
   const state = findMyState(entry);
-  const label = `${entry.device.display_name}: ${state.label}, ${formatRelativeTime(entry.location.captured_at)}`;
+  const label = `${entry.device.display_name}: ${state.label}, ${formatRelativeTime(entry.location.captured_at)}. Open device details.`;
   return `<button class="find-map-pin ${state.className}" type="button" style="--pin-x:${position.x.toFixed(2)}%;--pin-y:${position.y.toFixed(2)}%" aria-label="${escapeHTML(label)}" data-find-pin="${index}"><span aria-hidden="true">⌖</span></button>`;
 }
 
@@ -118,7 +118,7 @@ function renderDevice(entry: FindMyLiveDevice, index: number): string {
   const battery = sample?.battery_percent == null ? "Not reported" : `${sample.battery_percent}%`;
 
   return `
-    <article class="find-device-card" data-find-device="${index}" data-find-search="${escapeHTML(searchable)}">
+    <article class="find-device-card" tabindex="-1" data-find-device="${index}" data-find-search="${escapeHTML(searchable)}">
       <header class="find-device-heading">
         <div>
           <span class="eyebrow">${escapeHTML(entry.device.device_class)}</span>
@@ -167,7 +167,7 @@ export function renderFindMySurface(entries: FindMyLiveDevice[]): string {
 
       <section class="find-map-card" aria-labelledby="find-map-title">
         <div class="map-toolbar"><div><span class="eyebrow">Device map</span><h3 id="find-map-title">Last known positions</h3></div><span class="provider-state">MapLibre tile provider pending</span></div>
-        <div class="find-map-stage" role="img" aria-label="World coordinate overview of authorized device positions. Geographic tiles are disabled in this development slice.">
+        <div class="find-map-stage" aria-label="World coordinate overview of authorized device positions. Geographic tiles are disabled in this development slice.">
           <div class="find-map-grid" aria-hidden="true"></div>
           ${withLocation.length ? entries.map(renderMapPin).join("") : `<div class="map-message"><strong>No positions available</strong><p>Authorized last-known positions will appear here when enrolled devices report them.</p></div>`}
         </div>
@@ -199,4 +199,16 @@ export function bindFindMySurface(): void {
     count.textContent = `${visible} device${visible === 1 ? "" : "s"}`;
     status.textContent = query ? `Filtered by “${input.value.trim()}”.` : "Showing all enrolled devices.";
   });
+
+  for (const pin of document.querySelectorAll<HTMLButtonElement>("[data-find-pin]")) {
+    pin.addEventListener("click", () => {
+      const index = pin.dataset.findPin;
+      if (index == null) return;
+      const target = document.querySelector<HTMLElement>(`[data-find-device="${index}"]`);
+      if (!target) return;
+      target.hidden = false;
+      target.scrollIntoView({ block: "center" });
+      target.focus({ preventScroll: true });
+    });
+  }
 }
