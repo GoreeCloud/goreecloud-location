@@ -22,6 +22,7 @@ class LocationCollectorService : Service(), LocationListener {
     private val syncExecutor = Executors.newSingleThreadExecutor()
     private val syncGate = SingleFlightSyncGate()
     private var retryAttempt = 0
+    private var collectionProfile: CollectionProfile? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -45,16 +46,37 @@ class LocationCollectorService : Service(), LocationListener {
         startForeground(NOTIFICATION_ID, buildNotification())
         isRunning = true
         pendingSampleCount = queue.pendingCount()
-        requestUpdates()
+        applyCollectionProfile(batteryPercent())
         requestSync()
         return START_STICKY
     }
 
-    private fun requestUpdates() {
+    private fun batteryPercent(): Int? = getSystemService(BatteryManager::class.java)
+        .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        .takeIf { it in 0..100 }
+
+    private fun applyCollectionProfile(batteryPercent: Int?) {
+        val next = CollectionProfilePolicy.forBattery(batteryPercent)
+        if (collectionProfile?.id == next.id) return
+
+        locationManager.removeUpdates(this)
+        collectionProfile = next
+        currentCollectionProfile = next.label
+        currentCollectionIntervalSeconds = next.minTimeMs / 1_000L
+        currentCollectionDistanceMeters = next.minDistanceM
+        requestUpdates(next)
+    }
+
+    private fun requestUpdates(profile: CollectionProfile) {
         val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
         for (provider in providers) {
             if (locationManager.isProviderEnabled(provider)) {
-                locationManager.requestLocationUpdates(provider, 15_000L, 10f, this)
+                locationManager.requestLocationUpdates(
+                    provider,
+                    profile.minTimeMs,
+                    profile.minDistanceM,
+                    this,
+                )
             }
         }
     }
@@ -65,9 +87,7 @@ class LocationCollectorService : Service(), LocationListener {
         latestLatitude = location.latitude
         latestLongitude = location.longitude
 
-        val battery = getSystemService(BatteryManager::class.java)
-            .getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-            .takeIf { it in 0..100 }
+        val battery = batteryPercent()
         val sample = PendingLocationSample(
             clientSampleId = UUID.randomUUID().toString(),
             capturedAt = Instant.ofEpochMilli(location.time).toString(),
@@ -88,6 +108,8 @@ class LocationCollectorService : Service(), LocationListener {
         } catch (_: Exception) {
             syncState = "queue_error"
         }
+
+        applyCollectionProfile(battery)
     }
 
     private fun requestSync() {
@@ -131,6 +153,10 @@ class LocationCollectorService : Service(), LocationListener {
         latestLongitude = null
         latestAccuracyMeters = null
         latestObservedAtMillis = null
+        currentCollectionProfile = "Not active"
+        currentCollectionIntervalSeconds = 0L
+        currentCollectionDistanceMeters = 0f
+        collectionProfile = null
         isRunning = false
         super.onDestroy()
     }
@@ -180,6 +206,12 @@ class LocationCollectorService : Service(), LocationListener {
         @Volatile var pendingSampleCount: Int = 0
             private set
         @Volatile var syncState: String = "idle"
+            private set
+        @Volatile var currentCollectionProfile: String = "Not active"
+            private set
+        @Volatile var currentCollectionIntervalSeconds: Long = 0L
+            private set
+        @Volatile var currentCollectionDistanceMeters: Float = 0f
             private set
     }
 }
