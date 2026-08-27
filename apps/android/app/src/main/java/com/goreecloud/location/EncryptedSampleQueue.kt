@@ -3,6 +3,8 @@ package com.goreecloud.location
 import android.content.Context
 import org.json.JSONObject
 import java.io.File
+import java.time.Duration
+import java.time.Instant
 
 data class PendingLocationSample(
     val clientSampleId: String,
@@ -17,6 +19,12 @@ data class PendingLocationSample(
 )
 
 data class QueuedSample(val file: File, val sample: PendingLocationSample)
+
+data class QueueRetentionResult(
+    val removedExpired: Int,
+    val removedOverflow: Int,
+    val remaining: Int,
+)
 
 class EncryptedSampleQueue(private val context: Context) {
     private val directory = File(context.filesDir, "location-sample-queue")
@@ -34,20 +42,21 @@ class EncryptedSampleQueue(private val context: Context) {
             temporary.delete()
             throw IllegalStateException("unable to commit protected sample")
         }
+        enforceRetention()
     }
 
     fun pending(): List<QueuedSample> {
         if (!directory.exists()) return emptyList()
+        enforceRetention()
         val result = mutableListOf<QueuedSample>()
-        directory.listFiles { file -> file.isFile && file.name.endsWith(".enc") }
-            ?.forEach { file ->
-                try {
-                    val plaintext = KeystoreAesGcm.decrypt(KEY_ALIAS, file.readText(Charsets.UTF_8))
-                    result += QueuedSample(file, fromJson(JSONObject(plaintext.toString(Charsets.UTF_8))))
-                } catch (_: Exception) {
-                    file.renameTo(File(directory, file.name.removeSuffix(".enc") + ".corrupt"))
-                }
+        encryptedFiles().forEach { file ->
+            try {
+                val plaintext = KeystoreAesGcm.decrypt(KEY_ALIAS, file.readText(Charsets.UTF_8))
+                result += QueuedSample(file, fromJson(JSONObject(plaintext.toString(Charsets.UTF_8))))
+            } catch (_: Exception) {
+                file.renameTo(File(directory, file.name.removeSuffix(".enc") + ".corrupt"))
             }
+        }
         return result.sortedBy { it.sample.capturedAt }
     }
 
@@ -57,7 +66,53 @@ class EncryptedSampleQueue(private val context: Context) {
         }
     }
 
-    fun pendingCount(): Int = directory.listFiles { file -> file.isFile && file.name.endsWith(".enc") }?.size ?: 0
+    fun pendingCount(): Int = encryptedFiles().size
+
+    fun enforceRetention(now: Instant = Instant.now()): QueueRetentionResult {
+        if (!directory.exists()) return QueueRetentionResult(0, 0, 0)
+
+        var removedExpired = 0
+        var removedOverflow = 0
+        val retained = mutableListOf<Pair<File, Instant>>()
+
+        encryptedFiles().forEach { file ->
+            val capturedAt = readCapturedAt(file)
+            if (capturedAt == null) {
+                file.renameTo(File(directory, file.name.removeSuffix(".enc") + ".corrupt"))
+                return@forEach
+            }
+            if (Duration.between(capturedAt, now) > MAX_AGE) {
+                if (file.delete()) removedExpired += 1
+            } else {
+                retained += file to capturedAt
+            }
+        }
+
+        retained.sortedByDescending { it.second }
+            .drop(MAX_PENDING_SAMPLES)
+            .forEach { (file, _) ->
+                if (file.delete()) removedOverflow += 1
+            }
+
+        return QueueRetentionResult(
+            removedExpired = removedExpired,
+            removedOverflow = removedOverflow,
+            remaining = encryptedFiles().size,
+        )
+    }
+
+    private fun encryptedFiles(): List<File> =
+        directory.listFiles { file -> file.isFile && file.name.endsWith(".enc") }
+            ?.toList()
+            ?: emptyList()
+
+    private fun readCapturedAt(file: File): Instant? = try {
+        val plaintext = KeystoreAesGcm.decrypt(KEY_ALIAS, file.readText(Charsets.UTF_8))
+        val json = JSONObject(plaintext.toString(Charsets.UTF_8))
+        Instant.parse(json.getString("captured_at"))
+    } catch (_: Exception) {
+        null
+    }
 
     private fun toJson(sample: PendingLocationSample): JSONObject = JSONObject()
         .put("client_sample_id", sample.clientSampleId)
@@ -86,6 +141,8 @@ class EncryptedSampleQueue(private val context: Context) {
 
     companion object {
         private const val KEY_ALIAS = "goreecloud_location_sample_queue_v1"
+        private const val MAX_PENDING_SAMPLES = 1_000
+        private val MAX_AGE: Duration = Duration.ofDays(7)
     }
 }
 
