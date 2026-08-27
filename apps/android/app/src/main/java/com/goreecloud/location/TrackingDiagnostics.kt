@@ -16,6 +16,9 @@ data class TrackingDiagnostics(
         return "$collection • $encryptedPendingSamples encrypted pending • sync ${safeSyncState(syncState)}"
     }
 
+    fun policySummary(): String =
+        "Queue retention: ${EncryptedSampleQueue.retentionPolicySummary()} • retries: ${SyncRetryPolicy.policySummary()}"
+
     companion object {
         private fun formatDistance(value: Float): String =
             if (value % 1f == 0f) value.toInt().toString() else value.toString()
