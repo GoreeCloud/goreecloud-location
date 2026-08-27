@@ -1,4 +1,5 @@
 import "./styles.css";
+import { bindFindMySurface, renderFindMySurface } from "./find-my";
 
 type User = {
   id: string;
@@ -208,7 +209,7 @@ async function renderApplication(): Promise<void> {
   try {
     const data = await loadDashboard();
     app.innerHTML = `
-      <div class="app-shell">
+      <div class="app-shell" data-glaze-ui="location" data-glaze-version="1.5.0">
         <aside class="sidebar" aria-label="Location navigation">
           <a class="brand-lockup app-brand" href="#live"><span class="brand-mark" aria-hidden="true">◎</span><span>Location</span></a>
           <nav>
@@ -216,7 +217,7 @@ async function renderApplication(): Promise<void> {
             <a class="nav-item disabled" href="#timeline" aria-disabled="true"><span>◷</span>Timeline <em>Next</em></a>
             <a class="nav-item disabled" href="#places" aria-disabled="true"><span>⌂</span>Places</a>
             <a class="nav-item disabled" href="#trips" aria-disabled="true"><span>↗</span>Trips</a>
-            <a class="nav-item disabled" href="#find-my" aria-disabled="true"><span>◎</span>Find My <em>Planned</em></a>
+            <a class="nav-item" href="#find-my"><span>◎</span>Find My <em>Dev</em></a>
             <a class="nav-item disabled" href="#sharing" aria-disabled="true"><span>◇</span>Sharing</a>
           </nav>
           <div class="sidebar-footer">
@@ -262,6 +263,8 @@ async function renderApplication(): Promise<void> {
               ${data.live.length ? data.live.map(renderDeviceCard).join("") : `<div class="empty-state"><strong>No enrolled devices</strong><p>Enroll a device through the authenticated API before live location can appear here.</p></div>`}
             </div>
           </section>
+
+          ${renderFindMySurface(data.live)}
         </main>
       </div>`;
 
@@ -272,6 +275,7 @@ async function renderApplication(): Promise<void> {
     });
     document.querySelector<HTMLButtonElement>("#refresh-live")?.addEventListener("click", () => void refreshDashboard());
     document.querySelector<HTMLButtonElement>("#tracking-toggle")?.addEventListener("click", () => void setTrackingPaused(data.preferences));
+    bindFindMySurface();
 
     if (refreshTimer) window.clearInterval(refreshTimer);
     refreshTimer = window.setInterval(() => void refreshDashboard(), refreshIntervalMs);
