@@ -40,6 +40,9 @@ object SyncRetryPolicy {
         }
     }
 
+    fun policySummary(): String =
+        "network-required exponential backoff ${BASE_DELAY_MS / 1_000L}s–${MAX_DELAY_MS / 60_000L}m; auth and malformed data fail closed"
+
     private fun retry(reason: String, attempt: Int): RetryDecision {
         val exponent = attempt.coerceAtMost(MAX_EXPONENT)
         val delay = (BASE_DELAY_MS * (1L shl exponent)).coerceAtMost(MAX_DELAY_MS)
