@@ -27,5 +27,9 @@
             android:name=".LocationCollectorService"
             android:exported="false"
             android:foregroundServiceType="location" />
+        <service
+            android:name=".RetryJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>
