@@ -61,7 +61,8 @@ func main() {
 
 	accountAPI := httpapi.New(pool, logger)
 	trackingAPI := httpapi.NewTracking(pool, logger)
-	api := combinedAPIHandler(accountAPI, trackingAPI)
+	recoveryAPI := accountAPI.FindMyRecoveryRoutes()
+	api := combinedAPIHandler(accountAPI, trackingAPI, recoveryAPI)
 	server := newServer(addressFromEnvironment(), logger, func(ctx context.Context) error {
 		if err := httpapi.Readiness(ctx, pool); err != nil {
 			var connectedDatabase string
@@ -80,11 +81,13 @@ func main() {
 	}
 }
 
-func combinedAPIHandler(accountAPI, trackingAPI http.Handler) http.Handler {
+func combinedAPIHandler(accountAPI, trackingAPI, recoveryAPI http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/api/v1/locations", "/api/v1/live":
+		switch {
+		case r.URL.Path == "/api/v1/locations", r.URL.Path == "/api/v1/live":
 			trackingAPI.ServeHTTP(w, r)
+		case strings.HasPrefix(r.URL.Path, "/api/v1/find-my/"):
+			recoveryAPI.ServeHTTP(w, r)
 		default:
 			accountAPI.ServeHTTP(w, r)
 		}

@@ -6,9 +6,9 @@ GoreeCloud Location is GoreeCloud's privacy-first, first-party location applicat
 
 **Development — not production-ready.**
 
-The repository currently contains a validated Development PostgreSQL/PostGIS runtime, authenticated multi-user/device foundations, native device-authenticated sample ingestion, owner-scoped history/live reads, a Glaze UI web experience, server-enforced tracking pause/resume, and an owner-scoped **Find My device-state surface**.
+The repository currently contains a validated Development PostgreSQL/PostGIS runtime, authenticated multi-user/device foundations, native device-authenticated sample ingestion, owner-scoped history/live reads, a Glaze UI 2.0 web experience, server-enforced tracking pause/resume, an owner-scoped **Find My device-state surface**, and an owner-scoped **Find My recovery-capability gate**.
 
-Source/CI validation does not establish production deployment, production identity, geographic map delivery, background tracking acceptance, recovery authority, anti-stalking acceptance, release, or Stable qualification.
+Source/CI validation does not establish production deployment, production identity, geographic map delivery, background tracking acceptance, recovery command authority, anti-stalking acceptance, release, or Stable qualification.
 
 ## Governing principles
 
@@ -34,7 +34,7 @@ Web / Android / future approved clients
           |
    +------+------+----------------+
    |             |                |
-Ingestion   History/Live    Future derived/event work
+Ingestion   History/Live    Find My capability state
    |             |                |
    +-------------+----------------+
                  |
@@ -64,7 +64,7 @@ Coordinates are available from the native API and persisted in PostGIS, but the 
 
 ## Current Find My Development surface
 
-Find My is a first-party GoreeCloud Location capability. The merged Development source now includes an owner-scoped device discovery/state surface rather than only a planned navigation destination.
+Find My is a first-party GoreeCloud Location capability. The merged Development source includes an owner-scoped device discovery/state surface rather than only a planned navigation destination.
 
 Current implemented presentation includes:
 
@@ -72,16 +72,19 @@ Current implemented presentation includes:
 - responsive device state cards;
 - explicit Live / Recent / Stale / Offline / Unavailable presentation;
 - last-location age and accuracy when available;
-- optional battery information; and
-- sanitized diagnostic state.
+- optional battery information;
+- sanitized diagnostic state; and
+- server-authoritative recovery capability state.
 
-Recovery controls remain disabled/gated where authoritative server-side recovery commands do not exist. Current source does **not** establish Lost Mode, remote erase, nearby finding, offline finding, Find My Network, trusted-place recovery, anti-stalking runtime acceptance, or production recovery authority. `Offline` is a Development state derived from available sample/device recency, not proof of a real-time network connectivity probe.
+`GET /api/v1/find-my/recovery-capabilities` is authenticated through the existing user boundary and returns capability state only for the authenticated owner's enrolled devices. Lost Mode, Play Sound, and Mark Found are currently denied server-side. Active enrollments report `recovery_authority_unavailable`; revoked enrollments report `device_enrollment_revoked`. The web client keeps controls disabled if the capability response is missing or unavailable.
+
+Current source does **not** establish Lost Mode execution, remote erase, nearby finding, offline finding, Find My Network, trusted-place recovery, anti-stalking runtime acceptance, or production recovery authority. `Offline` is a Development state derived from available sample/device recency, not proof of a real-time network connectivity probe.
 
 ## API boundary
 
 The first-party API is versioned under `/api/v1/`. Ownership comes from authenticated user/device credentials, never request-supplied user identifiers.
 
-Current Development endpoints include health/readiness, authenticated identity, owner-scoped device listing/enrollment/revocation, owner preferences/tracking pause, authenticated device identity, device-authenticated location ingestion, owner-scoped location history, and owner-scoped live state.
+Current Development endpoints include health/readiness, authenticated identity, owner-scoped device listing/enrollment/revocation, owner preferences/tracking pause, authenticated device identity, device-authenticated location ingestion, owner-scoped location history, owner-scoped live state, and owner-scoped Find My recovery capability state.
 
 The ingestion path validates bounded sample data, derives ownership from the device credential, rejects user-session credentials for device ingestion, enforces idempotency, rechecks revocation, enforces tracking pause in the transaction, and stores location through the PostGIS ownership schema.
 
@@ -119,6 +122,7 @@ Still incomplete or separately gated:
 - [docs/authentication.md](docs/authentication.md)
 - [docs/tracking.md](docs/tracking.md)
 - [docs/live-web-experience.md](docs/live-web-experience.md)
+- [docs/find-my-development-surface.md](docs/find-my-development-surface.md)
 - [docs/security.md](docs/security.md)
 - [docs/privacy.md](docs/privacy.md)
 

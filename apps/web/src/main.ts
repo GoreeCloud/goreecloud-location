@@ -1,5 +1,5 @@
 import "./styles.css";
-import { bindFindMySurface, renderFindMySurface } from "./find-my";
+import { bindFindMySurface, renderFindMySurface, type FindMyRecoveryDevice } from "./find-my";
 
 type User = {
   id: string;
@@ -196,13 +196,16 @@ async function setTrackingPaused(current: Preferences): Promise<void> {
   await refreshDashboard();
 }
 
-async function loadDashboard(): Promise<{ user: User; preferences: Preferences; live: LiveDevice[] }> {
-  const [user, preferences, liveResponse] = await Promise.all([
+async function loadDashboard(): Promise<{ user: User; preferences: Preferences; live: LiveDevice[]; recovery: FindMyRecoveryDevice[] }> {
+  const recoveryRequest = apiRequest<{ devices: FindMyRecoveryDevice[] }>("/api/v1/find-my/recovery-capabilities")
+    .catch(() => ({ devices: [] }));
+  const [user, preferences, liveResponse, recoveryResponse] = await Promise.all([
     apiRequest<User>("/api/v1/me"),
     apiRequest<Preferences>("/api/v1/preferences"),
     apiRequest<{ devices: LiveDevice[] }>("/api/v1/live"),
+    recoveryRequest,
   ]);
-  return { user, preferences, live: liveResponse.devices };
+  return { user, preferences, live: liveResponse.devices, recovery: recoveryResponse.devices };
 }
 
 async function renderApplication(): Promise<void> {
@@ -264,7 +267,7 @@ async function renderApplication(): Promise<void> {
             </div>
           </section>
 
-          ${renderFindMySurface(data.live)}
+          ${renderFindMySurface(data.live, data.recovery)}
         </main>
       </div>`;
 
