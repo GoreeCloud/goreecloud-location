@@ -143,6 +143,24 @@ for device in a+b:
 PY
 
 curl --fail --silent \
+  -H "Authorization: Bearer $user_a_token" \
+  "http://$LOCATION_API_ADDRESS/api/v1/find-my/devices/$device_a_id" >"$tmp_dir/find-device-a.json"
+python3 - "$tmp_dir/find-device-a.json" "$device_a_id" <<'PY'
+import json,sys
+value=json.load(open(sys.argv[1]))
+assert value['device']['device_id'] == sys.argv[2]
+assert value['device']['display_name'] == 'User A Phone'
+assert value['last_location'] is None
+for capability in value['device']['capabilities'].values():
+    assert capability == {'available': False, 'reason': 'recovery_authority_unavailable'}
+PY
+
+status="$(curl --silent --output "$tmp_dir/find-device-cross-user.json" --write-out '%{http_code}' \
+  -H "Authorization: Bearer $user_b_token" \
+  "http://$LOCATION_API_ADDRESS/api/v1/find-my/devices/$device_a_id")"
+[[ "$status" == "404" ]] || { echo "cross-user Find My device detail was not hidden/rejected" >&2; exit 1; }
+
+curl --fail --silent \
   -H "Authorization: Bearer $device_a_token" \
   "http://$LOCATION_API_ADDRESS/api/v1/device" >"$tmp_dir/device-auth.json"
 python3 - "$tmp_dir/device-auth.json" "$user_a_id" "$device_a_id" <<'PY'
@@ -190,6 +208,18 @@ devices=json.load(open(sys.argv[1]))['devices']
 assert len(devices) == 1 and devices[0]['device_id'] == sys.argv[2]
 assert devices[0].get('revoked_at')
 for capability in devices[0]['capabilities'].values():
+    assert capability == {'available': False, 'reason': 'device_enrollment_revoked'}
+PY
+
+curl --fail --silent \
+  -H "Authorization: Bearer $user_a_token" \
+  "http://$LOCATION_API_ADDRESS/api/v1/find-my/devices/$device_a_id" >"$tmp_dir/find-device-a-revoked.json"
+python3 - "$tmp_dir/find-device-a-revoked.json" "$device_a_id" <<'PY'
+import json,sys
+value=json.load(open(sys.argv[1]))
+assert value['device']['device_id'] == sys.argv[2]
+assert value['device'].get('revoked_at')
+for capability in value['device']['capabilities'].values():
     assert capability == {'available': False, 'reason': 'device_enrollment_revoked'}
 PY
 
