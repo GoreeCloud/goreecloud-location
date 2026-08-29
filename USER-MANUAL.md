@@ -2,7 +2,7 @@
 
 ## Current availability
 
-GoreeCloud Location is in **Development** and is not production-ready. The current repository includes an authenticated Development web experience, native API/service foundations, a validated Development PostgreSQL/PostGIS runtime, device-authenticated location ingestion, owner-scoped live/history reads, tracking pause/resume, and an owner-scoped Find My device-state surface.
+GoreeCloud Location is in **Development** and is not production-ready. The current repository includes an authenticated Development web experience, native API/service foundations, a validated Development PostgreSQL/PostGIS runtime, device-authenticated location ingestion, owner-scoped live/history reads, tracking pause/resume, an owner-scoped Find My device-state surface, and a server-authoritative Find My recovery-capability gate.
 
 ## Sign in to a Development environment
 
@@ -48,7 +48,11 @@ These labels are Development presentation states. In particular, **Offline** is 
 
 ### Recovery actions
 
-Recovery actions remain disabled or gated where authoritative server-side recovery commands are not implemented. The current Find My surface does **not** establish Lost Mode, remote erase, nearby finding, offline finding, Find My Network participation, anti-stalking runtime acceptance, or other production recovery authority.
+The Find My client now asks the authenticated Location API for owner-scoped recovery capability state. Lost Mode, Play Sound, and Mark Found remain disabled unless a future server contract explicitly authorizes them.
+
+Current server behavior denies all three actions. Active enrollments report `recovery_authority_unavailable`; revoked enrollments report `device_enrollment_revoked`. If the capability response cannot be loaded, the client also keeps recovery controls disabled.
+
+This means the current interface has an authoritative **deny** contract, not recovery command authority. The repository still does **not** establish Lost Mode execution, remote erase, nearby finding, offline finding, Find My Network participation, anti-stalking runtime acceptance, or other production recovery authority.
 
 ## Location history
 
