@@ -1,161 +1,127 @@
 # GoreeCloud Location
 
-Privacy-first, self-hosted location history, real-time tracking, geofencing, travel insights, device tracking, and family location sharing for GoreeCloud.
+GoreeCloud Location is GoreeCloud's privacy-first, first-party location application and service for live tracking, location history, device state, and the staged path toward sharing, geofencing, trips, places, Find My recovery, and location analytics.
 
-> **Release lifecycle:** Development
->
-> GoreeCloud Location is not production-ready. The repository contains the native foundation, validated development PostgreSQL/PostGIS runtime, authenticated multi-user and device foundation, native device-authenticated tracking, owner-scoped history/live reads, and the first authenticated Glaze UI Live experience.
+## Status
 
-## Purpose
+**Development — not production-ready.**
 
-GoreeCloud Location is the first-party GoreeCloud application and service for private location history, live tracking, multi-user and family sharing, geofencing, trips, places, maps, device tracking, Find My, and location analytics.
+The repository currently contains a validated Development PostgreSQL/PostGIS runtime, authenticated multi-user/device foundations, native device-authenticated sample ingestion, owner-scoped history/live reads, a Glaze UI web experience, server-enforced tracking pause/resume, and an owner-scoped **Find My device-state surface**.
 
-The product combines two capability domains behind one user experience:
-
-- **Live tracking:** where an approved user or device is now.
-- **Location history:** where an approved user or device has been over time.
-
-Dawarich, Google Timeline, and Traccar are capability references. They are not intended to remain permanent architectural authorities for the native product.
+Source/CI validation does not establish production deployment, production identity, geographic map delivery, background tracking acceptance, recovery authority, anti-stalking acceptance, release, or Stable qualification.
 
 ## Governing principles
 
 - Location data is private by default.
-- Every location sample has an explicit owning user and source device.
-- Application administration does not automatically grant access to ordinary users' location histories.
-- Sharing is explicit, revocable, scoped, and independently controllable for live and historical data.
+- Every accepted sample has an explicit owning user and source device.
+- Administration does not automatically grant access to ordinary users' location histories.
+- Sharing must be explicit, revocable, and independently scoped when implemented.
 - Device credentials are distinct from interactive user sessions.
 - Raw precise coordinates must not be written to ordinary application logs.
-- Tracking pause and device revocation must be enforced by the server, not only by clients.
+- Tracking pause and device revocation are server-enforced boundaries.
 - No advertising, behavioral advertising, or sale of location data is permitted.
 - Mapping, geocoding, and routing dependencies must remain replaceable.
-- Data must remain exportable in open, documented formats.
-- Find My capabilities must be anti-stalking-aware and evidence-backed before Stable qualification.
+- Data must remain exportable through documented accepted formats when portability features are implemented.
+- Find My Stable qualification requires dedicated privacy, recovery, abuse-prevention, security, continuity, and anti-stalking acceptance.
 
-## Planned architecture
+## Current architecture
 
 ```text
-Web / Android / future iOS
+Web / Android / future approved clients
           |
           v
      Location API v1
           |
    +------+------+----------------+
    |             |                |
-Ingestion   History/Trips   Geofence/Events
+Ingestion   History/Live    Future derived/event work
    |             |                |
    +-------------+----------------+
                  |
           PostgreSQL + PostGIS
 ```
 
-The primary implementation direction is:
+Current implementation direction:
 
-- **Web:** TypeScript using Glaze UI conventions.
-- **API and long-running services:** Go.
-- **Android:** native Kotlin.
-- **Database:** PostgreSQL with PostGIS.
-- **Maps:** open, replaceable MapLibre-compatible provider architecture.
-- **Deployment:** self-hosted GoreeCloud infrastructure with approved HTTPS/private-access controls.
+- **Web:** TypeScript with Glaze UI 2.0 source targets.
+- **API/services:** Go.
+- **Android:** native Kotlin direction/current foundation where implemented.
+- **Database:** PostgreSQL + PostGIS.
+- **Maps:** replaceable MapLibre-compatible provider architecture; production geographic delivery is not yet accepted.
+- **Deployment:** controlled self-hosted GoreeCloud infrastructure when production gates are satisfied.
 
-## Repository layout
+## Current authenticated web experience
 
-```text
-.github/             CI and repository automation
-apps/web/            GoreeCloud Location web client
-apps/android/        Native Android client
-assets/brand/        Official application icon, logo, and artwork
-services/api/        Versioned HTTP API and administrative tooling
-services/worker/     Background processing and derived-data jobs
-migrations/          Authoritative SQL schema migrations
-tests/integration/   Runtime database, authorization, and tracking acceptance
-scripts/dev/         Controlled local-development helpers
-docs/                Architecture, security, privacy, tracking, and development documentation
-deploy/              Development deployment definitions and operational notes
-```
+The Development web client can use an interim session-scoped user credential to access owner-scoped state. The credential is stored in browser `sessionStorage` and removed at sign-out. This is not the final production GoreeCloud Identity session design.
 
-Some directories begin as documented boundaries and gain implementation as their milestone starts.
+The Live experience supports authenticated identity, live/last-known device state, sample age, accuracy, optional battery information, stale/no-location states, manual refresh, periodic automatic refresh, and server-enforced tracking pause/resume.
 
-## Development runtime
+The browser never supplies an authoritative user ID; the server derives ownership from the authenticated credential.
 
-Milestone 0 established a development-only PostgreSQL/PostGIS runtime so migrations, ownership constraints, geospatial behavior, and API dependency readiness can be tested against a real database without implying production deployment. Milestone 1 added authenticated persistence and two-user authorization acceptance. Milestone 2 now exercises native sample ingestion and owner-scoped tracking reads against the same real PostGIS path and adds the first authenticated Live web experience over those contracts.
+### Geographic map boundary
 
-Start and validate the local database with:
+Coordinates are available from the native API and persisted in PostGIS, but the current web surface does not claim production geographic map delivery. Map tiles remain gated until the replaceable provider adapter and its privacy/security/operational acceptance are complete.
 
-```bash
-./scripts/dev/database-up.sh
-```
+## Current Find My Development surface
 
-The script creates local protected configuration when needed, starts the digest-pinned development PostGIS container, applies unapplied migrations, and runs database integration acceptance. Stop it with `./scripts/dev/database-down.sh`.
+Find My is a first-party GoreeCloud Location capability. The merged Development source now includes an owner-scoped device discovery/state surface rather than only a planned navigation destination.
 
-See [docs/development-runtime.md](docs/development-runtime.md) for the development boundary, [docs/authentication.md](docs/authentication.md) for the user/device authentication model, [docs/tracking.md](docs/tracking.md) for the native tracking API and privacy boundary, and [docs/live-web-experience.md](docs/live-web-experience.md) for the current Glaze UI Live contract.
+Current implemented presentation includes:
 
-## Initial milestones
+- owner-scoped device search/listing;
+- responsive device state cards;
+- explicit Live / Recent / Stale / Offline / Unavailable presentation;
+- last-location age and accuracy when available;
+- optional battery information; and
+- sanitized diagnostic state.
 
-1. **Milestone 0 — Foundation:** repository structure, CI, API skeleton, schema, development PostGIS runtime, migration validation, documentation, security baseline.
-2. **Milestone 1 — Users and devices:** authenticated user persistence, ownership isolation, device enrollment, device-scoped credentials, revocation, and user preferences.
-3. **Milestone 2 — Native tracking:** device-authenticated ingestion, owner-scoped live/history API, and authenticated Live web experience; Android collector prototype, encrypted offline queue/synchronization, authenticated live-update transport, and geographic map-provider integration remain later Milestone 2 work.
-4. **Milestone 3 — History:** timeline, paths, filtering, distance and playback foundations.
-5. **Milestone 4+ — Places, sharing, geofencing, trips, insights, migration, portability, Find My expansion, and native cutover.**
-
-## Current Live web experience
-
-The TypeScript web application now provides a responsive Glaze UI shell over the authenticated native API. It supports session-scoped user credential entry, authenticated identity, live and last-known device state, sample age, accuracy, optional battery information, explicit stale/no-location states, manual refresh, 30-second automatic refresh, and server-enforced tracking pause/resume.
-
-The interface does not accept a client-supplied user ID as authority. The server derives ownership from the authenticated user credential. The development credential is kept in browser `sessionStorage` and removed at sign-out; this remains an interim development UX until GoreeCloud Identity browser-session integration is implemented.
-
-The Live map surface deliberately does not claim geographic mapping yet. Coordinates are already available from the native API, but map tiles remain disabled until the replaceable MapLibre-compatible provider adapter is implemented and reviewed. The stored PostGIS geospatial record remains authoritative.
+Recovery controls remain disabled/gated where authoritative server-side recovery commands do not exist. Current source does **not** establish Lost Mode, remote erase, nearby finding, offline finding, Find My Network, trusted-place recovery, anti-stalking runtime acceptance, or production recovery authority. `Offline` is a Development state derived from available sample/device recency, not proof of a real-time network connectivity probe.
 
 ## API boundary
 
-The first-party API is versioned under `/api/v1/`. Client-supplied user identifiers are never trusted as ownership authority. User-scoped resources derive ownership from the authenticated user credential. Location ingestion derives both user and device ownership from the authenticated device credential and does not accept request-supplied ownership identifiers.
+The first-party API is versioned under `/api/v1/`. Ownership comes from authenticated user/device credentials, never request-supplied user identifiers.
 
-Current development endpoints include:
+Current Development endpoints include health/readiness, authenticated identity, owner-scoped device listing/enrollment/revocation, owner preferences/tracking pause, authenticated device identity, device-authenticated location ingestion, owner-scoped location history, and owner-scoped live state.
 
-- `GET /healthz` — process liveness;
-- `GET /readyz` — authenticated PostgreSQL connectivity plus required schema-migration readiness;
-- `GET /api/v1/me` — authenticated user identity;
-- `GET|POST /api/v1/devices` — owner-scoped device listing and enrollment;
-- `DELETE /api/v1/devices/{deviceID}` — owner-scoped device and credential revocation;
-- `GET|PUT /api/v1/preferences` — owner-scoped preferences and tracking-pause control;
-- `GET /api/v1/device` — authenticated device identity;
-- `POST /api/v1/locations` — device-authenticated native location ingestion;
-- `GET /api/v1/locations` — owner-scoped location history with bounded filters; and
-- `GET /api/v1/live` — owner-scoped most-recent location state for active devices.
+The ingestion path validates bounded sample data, derives ownership from the device credential, rejects user-session credentials for device ingestion, enforces idempotency, rechecks revocation, enforces tracking pause in the transaction, and stores location through the PostGIS ownership schema.
 
-The tracking API is intentionally narrow. It does not yet provide user-to-user sharing, public links, Android background collection, offline synchronization, route/timeline inference, places, trips, geofences, or a production tracking cutover.
+## Security, privacy, and platform systems
 
-## Native tracking boundary
+- **Privacy Shield / Privacy Center:** privacy, consent, minimization, retention/user control, sharing, and location-sensitive data governance.
+- **Wardveil Security / Security Center:** applicable protection, trust, verification, anti-abuse, recovery-security, and response controls.
+- **Everkeep / Continuity Center:** accepted export, backup, recovery, preservation, portability, and succession.
+- **GoreeCloud Identity / Identity Center:** production user/device/account/session authority.
+- **GoreeCloud Mesh / Mesh Center:** authenticated policy-controlled cross-service coordination.
+- **Glaze UI / Design Center:** approved interface/design-system governance.
 
-A native sample requires a client-generated idempotency identifier, a capture timestamp, latitude, and longitude. Optional accuracy, altitude, speed, bearing, and battery information may be supplied within validated bounds.
+Passing source tests does not constitute production acceptance of these systems.
 
-The server:
+## Current limitations
 
-- derives the owning user and source device from the device credential;
-- rejects user-session credentials for device ingestion;
-- rejects missing, malformed, impossible, or excessively future-dated samples;
-- stores coordinates through the existing PostGIS `geography(Point, 4326)` ownership schema;
-- treats a repeated `(device_id, client_sample_id)` with the same normalized payload as an idempotent retry;
-- rejects the same idempotency identifier with a conflicting payload;
-- rechecks device revocation inside the ingestion transaction;
-- rechecks and locks the user's tracking-pause preference before persistence; and
-- scopes history and live queries to the authenticated user on the server.
+Still incomplete or separately gated:
 
-See [docs/tracking.md](docs/tracking.md) for the detailed contract and validation limits.
+- production GoreeCloud Identity browser/device integration;
+- production geographic map/geocoding/routing provider deployment;
+- Android background collection and representative-device acceptance;
+- encrypted offline queue/synchronization;
+- general sharing/public links;
+- timeline/trips/places/geofences/insights;
+- production Find My recovery commands and offline/nearby finding;
+- anti-stalking runtime acceptance;
+- full portability/backup/restore acceptance;
+- production deployment, signed release, and Stable qualification.
 
-## Find My direction
+## Documentation
 
-Find My is a first-party GoreeCloud Location capability, not a disconnected service. Its planned native scope includes device finding, nearby finding, Lost Mode, protected remote recovery, offline finding, Find My Network, trusted places, theft-protection correlation, recovery contacts, and mandatory anti-stalking protections.
-
-None of those capabilities are considered implemented merely because the Live web navigation exposes a planned Find My destination. Find My Stable qualification requires the dedicated Privacy Shield, Wardveil Security, Everkeep, recovery, cryptographic, abuse-prevention, and anti-stalking acceptance gates defined by the GoreeCloud Location project specification.
-
-## Security and privacy
-
-Location information is highly sensitive. Current development acceptance exercises independent user identities, owner-scoped device visibility, cross-user object-access rejection, owner-scoped preferences, device-specific credentials, credential invalidation after device revocation, native sample ownership, idempotency, user-separated history/live reads, tracking pause, malformed-sample rejection, and ordinary-log checks for tested bearer credentials and precise coordinates. Opaque credentials are persisted only as SHA-256 hashes; plaintext credentials are returned only at issuance.
-
-Production approval still requires the complete GoreeCloud Location production-readiness gates, including secure transport, rate limiting, broader privacy and retention controls, sharing revocation, import/export behavior, backup and restore, monitoring, native-client acceptance, representative end-to-end security/privacy review, and Android background-tracking acceptance on supported devices.
-
-See [docs/security.md](docs/security.md), [docs/privacy.md](docs/privacy.md), [docs/authentication.md](docs/authentication.md), [docs/tracking.md](docs/tracking.md), and [docs/live-web-experience.md](docs/live-web-experience.md).
+- [USER-MANUAL.md](USER-MANUAL.md)
+- [SPECIFICATIONS.md](SPECIFICATIONS.md)
+- [docs/development-runtime.md](docs/development-runtime.md)
+- [docs/authentication.md](docs/authentication.md)
+- [docs/tracking.md](docs/tracking.md)
+- [docs/live-web-experience.md](docs/live-web-experience.md)
+- [docs/security.md](docs/security.md)
+- [docs/privacy.md](docs/privacy.md)
 
 ## License
 
-GoreeCloud Location is licensed under the **GNU Affero General Public License v3.0**. See [LICENSE](LICENSE).
+GNU Affero General Public License v3.0. See `LICENSE`.
