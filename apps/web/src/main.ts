@@ -209,7 +209,7 @@ async function renderApplication(): Promise<void> {
   try {
     const data = await loadDashboard();
     app.innerHTML = `
-      <div class="app-shell" data-glaze-ui="location" data-glaze-version="1.5.0">
+      <div class="app-shell" data-glaze-ui="location" data-glaze-version="2.0.0">
         <aside class="sidebar" aria-label="Location navigation">
           <a class="brand-lockup app-brand" href="#live"><span class="brand-mark" aria-hidden="true">◎</span><span>Location</span></a>
           <nav>
