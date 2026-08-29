@@ -10,7 +10,7 @@ import (
 
 type findMyDeviceDetailResponse struct {
 	Device       findMyRecoveryDeviceResponse `json:"device"`
-	LastLocation *locationResponse             `json:"last_location"`
+	LastLocation *locationResponse            `json:"last_location"`
 }
 
 // getFindMyDeviceDetail returns one authenticated owner's enrolled-device identity,
