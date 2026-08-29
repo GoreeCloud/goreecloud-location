@@ -125,6 +125,24 @@ assert sys.argv[4] in b and sys.argv[3] not in b
 PY
 
 curl --fail --silent \
+  -H "Authorization: Bearer $user_a_token" \
+  "http://$LOCATION_API_ADDRESS/api/v1/find-my/recovery-capabilities" >"$tmp_dir/recovery-a.json"
+curl --fail --silent \
+  -H "Authorization: Bearer $user_b_token" \
+  "http://$LOCATION_API_ADDRESS/api/v1/find-my/recovery-capabilities" >"$tmp_dir/recovery-b.json"
+python3 - "$tmp_dir/recovery-a.json" "$tmp_dir/recovery-b.json" "$device_a_id" "$device_b_id" <<'PY'
+import json,sys
+a=json.load(open(sys.argv[1]))['devices']
+b=json.load(open(sys.argv[2]))['devices']
+assert {d['device_id'] for d in a} == {sys.argv[3]}
+assert {d['device_id'] for d in b} == {sys.argv[4]}
+for device in a+b:
+    assert set(device['capabilities']) == {'lost_mode','play_sound','mark_found'}
+    for capability in device['capabilities'].values():
+        assert capability == {'available': False, 'reason': 'recovery_authority_unavailable'}
+PY
+
+curl --fail --silent \
   -H "Authorization: Bearer $device_a_token" \
   "http://$LOCATION_API_ADDRESS/api/v1/device" >"$tmp_dir/device-auth.json"
 python3 - "$tmp_dir/device-auth.json" "$user_a_id" "$device_a_id" <<'PY'
@@ -162,6 +180,18 @@ status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
   -H "Authorization: Bearer $user_a_token" \
   "http://$LOCATION_API_ADDRESS/api/v1/devices/$device_a_id")"
 [[ "$status" == "204" ]] || { echo "owner could not revoke device" >&2; exit 1; }
+
+curl --fail --silent \
+  -H "Authorization: Bearer $user_a_token" \
+  "http://$LOCATION_API_ADDRESS/api/v1/find-my/recovery-capabilities" >"$tmp_dir/recovery-a-revoked.json"
+python3 - "$tmp_dir/recovery-a-revoked.json" "$device_a_id" <<'PY'
+import json,sys
+devices=json.load(open(sys.argv[1]))['devices']
+assert len(devices) == 1 and devices[0]['device_id'] == sys.argv[2]
+assert devices[0].get('revoked_at')
+for capability in devices[0]['capabilities'].values():
+    assert capability == {'available': False, 'reason': 'device_enrollment_revoked'}
+PY
 
 status="$(curl --silent --output "$tmp_dir/revoked-device.json" --write-out '%{http_code}' \
   -H "Authorization: Bearer $device_a_token" \
