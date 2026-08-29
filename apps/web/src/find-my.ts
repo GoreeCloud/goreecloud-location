@@ -19,14 +19,30 @@ export type FindMyLiveDevice = {
   location: FindMyLocationSample | null;
 };
 
+export type FindMyRecoveryAction = {
+  available: boolean;
+  reason: "recovery_authority_unavailable" | "device_enrollment_revoked" | string;
+};
+
+export type FindMyRecoveryDevice = {
+  device_id: string;
+  display_name: string;
+  device_class: string;
+  revoked_at?: string;
+  capabilities: {
+    lost_mode: FindMyRecoveryAction;
+    play_sound: FindMyRecoveryAction;
+    mark_found: FindMyRecoveryAction;
+  };
+};
+
 type FindMyState = {
   label: "Live" | "Recent" | "Stale" | "Offline" | "Unavailable";
   className: "good" | "warn" | "stale" | "offline" | "muted";
   detail: string;
 };
 
-const GLAZE_VERSION = "1.5.0";
-const GLAZE_SOURCE_REVISION = "2e1618397f6ebcdd254a76bfdd7e98846f2c5aa3";
+const GLAZE_VERSION = "2.0.0";
 
 function escapeHTML(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
@@ -106,7 +122,14 @@ function renderMapPin(entry: FindMyLiveDevice, index: number): string {
   return `<button class="find-map-pin ${state.className}" type="button" style="--pin-x:${position.x.toFixed(2)}%;--pin-y:${position.y.toFixed(2)}%" aria-label="${escapeHTML(label)}" data-find-pin="${index}"><span aria-hidden="true">⌖</span></button>`;
 }
 
-function renderDevice(entry: FindMyLiveDevice, index: number): string {
+function recoveryReason(capability: FindMyRecoveryAction | undefined): string {
+  if (!capability) return "Recovery capability state could not be loaded; commands remain disabled.";
+  if (capability.reason === "device_enrollment_revoked") return "Enrollment is revoked; recovery commands are denied server-side.";
+  if (capability.reason === "recovery_authority_unavailable") return "Recovery command authority is not implemented; commands are denied server-side.";
+  return `Recovery is unavailable (${capability.reason || "unknown_reason"}).`;
+}
+
+function renderDevice(entry: FindMyLiveDevice, index: number, recovery: FindMyRecoveryDevice | undefined): string {
   const state = findMyState(entry);
   const sample = entry.location;
   const searchable = `${entry.device.display_name} ${entry.device.device_class} ${state.label}`.toLowerCase();
@@ -116,6 +139,7 @@ function renderDevice(entry: FindMyLiveDevice, index: number): string {
   const recency = sample ? formatRelativeTime(sample.captured_at) : "Never reported";
   const accuracy = sample?.accuracy_m == null ? "Not reported" : `±${Math.round(sample.accuracy_m)} m`;
   const battery = sample?.battery_percent == null ? "Not reported" : `${sample.battery_percent}%`;
+  const reason = recoveryReason(recovery?.capabilities.lost_mode);
 
   return `
     <article class="find-device-card" tabindex="-1" data-find-device="${index}" data-find-search="${escapeHTML(searchable)}">
@@ -134,19 +158,20 @@ function renderDevice(entry: FindMyLiveDevice, index: number): string {
         <div><dt>Battery</dt><dd>${escapeHTML(battery)}</dd></div>
       </dl>
       <div class="recovery-panel" aria-label="Recovery capability state">
-        <div><strong>Recovery state</strong><span>Not armed in this Development slice.</span></div>
+        <div><strong>Recovery state</strong><span>${recovery ? "Server-authoritative capability gate loaded." : "Capability gate unavailable."}</span></div>
         <div class="recovery-actions">
-          <button type="button" disabled aria-disabled="true">Lost Mode</button>
-          <button type="button" disabled aria-disabled="true">Play sound</button>
-          <button type="button" disabled aria-disabled="true">Mark found</button>
+          <button type="button" disabled aria-disabled="true" data-recovery-capability="lost_mode">Lost Mode</button>
+          <button type="button" disabled aria-disabled="true" data-recovery-capability="play_sound">Play sound</button>
+          <button type="button" disabled aria-disabled="true" data-recovery-capability="mark_found">Mark found</button>
         </div>
-        <p>Commands remain disabled until device command authority, authentication, anti-abuse controls, and evidence-backed recovery contracts are implemented.</p>
+        <p>${escapeHTML(reason)}</p>
       </div>
     </article>`;
 }
 
-export function renderFindMySurface(entries: FindMyLiveDevice[]): string {
+export function renderFindMySurface(entries: FindMyLiveDevice[], recoveryDevices: FindMyRecoveryDevice[] = []): string {
   const withLocation = entries.filter((entry) => entry.location && !entry.device.revoked_at);
+  const recoveryByDevice = new Map(recoveryDevices.map((entry) => [entry.device_id, entry]));
   const stateCounts = entries.reduce<Record<string, number>>((counts, entry) => {
     const label = findMyState(entry).label;
     counts[label] = (counts[label] ?? 0) + 1;
@@ -154,7 +179,7 @@ export function renderFindMySurface(entries: FindMyLiveDevice[]): string {
   }, {});
 
   return `
-    <section class="find-my-section" id="find-my" aria-labelledby="find-my-title" data-glaze-version="${GLAZE_VERSION}" data-glaze-source-revision="${GLAZE_SOURCE_REVISION}">
+    <section class="find-my-section" id="find-my" aria-labelledby="find-my-title" data-glaze-version="${GLAZE_VERSION}">
       <div class="find-my-heading">
         <div><span class="eyebrow">Find My</span><h2 id="find-my-title">Find an enrolled device.</h2></div>
         <label class="find-search"><span class="sr-only">Search enrolled devices</span><input id="find-device-search" type="search" placeholder="Search devices" autocomplete="off" /></label>
@@ -176,7 +201,7 @@ export function renderFindMySurface(entries: FindMyLiveDevice[]): string {
 
       <div class="find-results-heading"><strong id="find-result-count">${entries.length} device${entries.length === 1 ? "" : "s"}</strong><span aria-live="polite" id="find-filter-status">Showing all enrolled devices.</span></div>
       <div class="find-device-grid">
-        ${entries.length ? entries.map(renderDevice).join("") : `<div class="empty-state"><strong>No enrolled devices</strong><p>Enroll a device before Find My can show authorized state.</p></div>`}
+        ${entries.length ? entries.map((entry, index) => renderDevice(entry, index, recoveryByDevice.get(entry.device.id))).join("") : `<div class="empty-state"><strong>No enrolled devices</strong><p>Enroll a device before Find My can show authorized state.</p></div>`}
       </div>
     </section>`;
 }
