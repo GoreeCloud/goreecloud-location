@@ -6,7 +6,7 @@ GoreeCloud Location is GoreeCloud's privacy-first, first-party location applicat
 
 **Development — not production-ready.**
 
-The repository currently contains a validated Development PostgreSQL/PostGIS runtime, authenticated multi-user/device foundations, native device-authenticated sample ingestion, owner-scoped history/live reads, a Glaze UI 2.0 web experience, server-enforced tracking pause/resume, an owner-scoped **Find My device-state surface**, and an owner-scoped **Find My recovery-capability gate**.
+The repository currently contains a validated Development PostgreSQL/PostGIS runtime, authenticated multi-user/device foundations, native device-authenticated sample ingestion, owner-scoped history/live reads, a Glaze UI 2.0 web experience, server-enforced tracking pause/resume, an owner-scoped **read-only Timeline surface**, an owner-scoped **Find My device-state surface**, and an owner-scoped **Find My recovery-capability gate**.
 
 Source/CI validation does not establish production deployment, production identity, geographic map delivery, background tracking acceptance, recovery command authority, anti-stalking acceptance, release, or Stable qualification.
 
@@ -55,6 +55,8 @@ Current implementation direction:
 The Development web client can use an interim session-scoped user credential to access owner-scoped state. The credential is stored in browser `sessionStorage` and removed at sign-out. This is not the final production GoreeCloud Identity session design.
 
 The Live experience supports authenticated identity, live/last-known device state, sample age, accuracy, optional battery information, stale/no-location states, manual refresh, periodic automatic refresh, and server-enforced tracking pause/resume.
+
+The read-only Timeline reuses the same authenticated owner-scoped history API and renders at most 50 newest persisted samples. It provides an in-view enrolled-device filter and shows capture time, coordinates, accuracy, source, and server-received time. Timeline does not infer a route, visit, stay, trip, transport mode, geofence, or current connectivity state from historical samples.
 
 The browser never supplies an authoritative user ID; the server derives ownership from the authenticated credential.
 
@@ -108,7 +110,7 @@ Still incomplete or separately gated:
 - Android background collection and representative-device acceptance;
 - encrypted offline queue/synchronization;
 - general sharing/public links;
-- timeline/trips/places/geofences/insights;
+- Timeline retention/purge/export controls, route inference, trips, places, geofences, and insights;
 - production Find My recovery commands and offline/nearby finding;
 - anti-stalking runtime acceptance;
 - full portability/backup/restore acceptance;
@@ -122,6 +124,7 @@ Still incomplete or separately gated:
 - [docs/authentication.md](docs/authentication.md)
 - [docs/tracking.md](docs/tracking.md)
 - [docs/live-web-experience.md](docs/live-web-experience.md)
+- [docs/timeline-development-surface.md](docs/timeline-development-surface.md)
 - [docs/find-my-development-surface.md](docs/find-my-development-surface.md)
 - [docs/security.md](docs/security.md)
 - [docs/privacy.md](docs/privacy.md)

@@ -1,6 +1,7 @@
 import "./styles.css";
 import { bindFindMySurface, renderFindMySurface, type FindMyRecoveryDevice } from "./find-my";
 import { bindFindMyDeviceDetails } from "./find-my-device-detail";
+import { bindTimelineSurface, renderTimelineSurface } from "./timeline";
 
 type User = {
   id: string;
@@ -42,6 +43,7 @@ type LiveDevice = {
 
 const storageKey = "goreecloud-location-user-token";
 const refreshIntervalMs = 30_000;
+const timelineLimit = 50;
 
 const applicationRoot = document.querySelector<HTMLElement>("#app");
 if (!applicationRoot) throw new Error("GoreeCloud Location application root was not found.");
@@ -197,16 +199,23 @@ async function setTrackingPaused(current: Preferences): Promise<void> {
   await refreshDashboard();
 }
 
-async function loadDashboard(): Promise<{ user: User; preferences: Preferences; live: LiveDevice[]; recovery: FindMyRecoveryDevice[] }> {
+async function loadDashboard(): Promise<{ user: User; preferences: Preferences; live: LiveDevice[]; history: LocationSample[]; recovery: FindMyRecoveryDevice[] }> {
   const recoveryRequest = apiRequest<{ devices: FindMyRecoveryDevice[] }>("/api/v1/find-my/recovery-capabilities")
     .catch(() => ({ devices: [] }));
-  const [user, preferences, liveResponse, recoveryResponse] = await Promise.all([
+  const [user, preferences, liveResponse, historyResponse, recoveryResponse] = await Promise.all([
     apiRequest<User>("/api/v1/me"),
     apiRequest<Preferences>("/api/v1/preferences"),
     apiRequest<{ devices: LiveDevice[] }>("/api/v1/live"),
+    apiRequest<{ locations: LocationSample[] }>(`/api/v1/locations?limit=${timelineLimit}`),
     recoveryRequest,
   ]);
-  return { user, preferences, live: liveResponse.devices, recovery: recoveryResponse.devices };
+  return {
+    user,
+    preferences,
+    live: liveResponse.devices,
+    history: historyResponse.locations.slice(0, timelineLimit),
+    recovery: recoveryResponse.devices,
+  };
 }
 
 async function renderApplication(): Promise<void> {
@@ -218,7 +227,7 @@ async function renderApplication(): Promise<void> {
           <a class="brand-lockup app-brand" href="#live"><span class="brand-mark" aria-hidden="true">◎</span><span>Location</span></a>
           <nav>
             <a class="nav-item active" href="#live"><span>⌖</span>Live</a>
-            <a class="nav-item disabled" href="#timeline" aria-disabled="true"><span>◷</span>Timeline <em>Next</em></a>
+            <a class="nav-item" href="#timeline"><span>◷</span>Timeline <em>Dev</em></a>
             <a class="nav-item disabled" href="#places" aria-disabled="true"><span>⌂</span>Places</a>
             <a class="nav-item disabled" href="#trips" aria-disabled="true"><span>↗</span>Trips</a>
             <a class="nav-item" href="#find-my"><span>◎</span>Find My <em>Dev</em></a>
@@ -268,6 +277,7 @@ async function renderApplication(): Promise<void> {
             </div>
           </section>
 
+          ${renderTimelineSurface(data.live, data.history)}
           ${renderFindMySurface(data.live, data.recovery)}
         </main>
       </div>`;
@@ -279,6 +289,7 @@ async function renderApplication(): Promise<void> {
     });
     document.querySelector<HTMLButtonElement>("#refresh-live")?.addEventListener("click", () => void refreshDashboard());
     document.querySelector<HTMLButtonElement>("#tracking-toggle")?.addEventListener("click", () => void setTrackingPaused(data.preferences));
+    bindTimelineSurface();
     bindFindMySurface();
     bindFindMyDeviceDetails(data.live, apiRequest);
 
