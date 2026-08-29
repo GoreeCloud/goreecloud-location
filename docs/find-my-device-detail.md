@@ -15,15 +15,20 @@ The endpoint derives ownership from the authenticated user principal and constra
 
 ## Web detail surface
 
-The Development Find My web surface now exposes an explicit `View authoritative detail` control for each owner-scoped device card. Opening it performs a fresh authenticated read of the single-device endpoint rather than treating the dashboard list as recovery authority.
+The Development Find My web surface exposes an explicit `View authoritative detail` control for each owner-scoped device card. Opening it performs fresh authenticated reads rather than treating the dashboard list as recovery or history authority.
 
 The detail dialog presents:
 
 - enrolled/revoked device state;
 - latest persisted coordinates and capture time;
 - server-received time when present;
-- accuracy, battery, altitude, speed, and source when present; and
+- accuracy, battery, altitude, speed, and source when present;
+- up to 10 newest persisted location samples for the selected device; and
 - the exact recovery capability reasons returned by the server.
+
+The bounded history reuses the existing authenticated owner-scoped `GET /api/v1/locations` endpoint with `device_id=<selected device>` and `limit=10`. No parallel history authority or new location-storage path is introduced. The client also filters the returned samples against the selected device identity before rendering them.
+
+The history list shows persisted capture/server-received timestamps, coordinates, accuracy when present, and source. It deliberately does not interpolate a route, infer motion between samples, or present the records as proof of current connectivity.
 
 The dialog is read-only. All Lost Mode, Play Sound, and Mark Found controls remain disabled in the client. Even if a future or malformed response reports a capability as available, this Development UI has no command-execution path and does not convert that state into an enabled action.
 
@@ -38,8 +43,8 @@ Revoked devices remain visible to their owner through this detail read so the cl
 
 ## Location boundary
 
-`last_location` is the newest persisted sample already authorized to the same owner. It does not claim real-time reachability, nearby finding, offline network participation, or current device connectivity. If no sample exists, the field is `null`.
+`last_location` is the newest persisted sample already authorized to the same owner. The bounded history is likewise existing persisted owner-authorized state. Neither surface claims real-time reachability, route reconstruction, nearby finding, offline network participation, or current device connectivity. If no sample exists, `last_location` is `null` and the history surface presents an empty state.
 
 ## Explicit limitations
 
-This Development read model and UI do not implement Lost Mode execution, Play Sound execution, Mark Found execution, remote erase, offline finding, Find My Network, precision/nearby finding, anti-stalking runtime acceptance, production Identity integration, production recovery authority, deployment, release, or Stable qualification.
+This Development read model and UI do not implement a general Timeline product, route reconstruction, geofencing, Lost Mode execution, Play Sound execution, Mark Found execution, remote erase, offline finding, Find My Network, precision/nearby finding, anti-stalking runtime acceptance, production Identity integration, production recovery authority, deployment, release, or Stable qualification.
