@@ -1,5 +1,6 @@
 import "./styles.css";
 import { bindFindMySurface, renderFindMySurface, type FindMyRecoveryDevice } from "./find-my";
+import { bindFindMyDeviceDetails, type FindMyDeviceDetail } from "./find-my-device-detail";
 
 type User = {
   id: string;
@@ -279,6 +280,7 @@ async function renderApplication(): Promise<void> {
     document.querySelector<HTMLButtonElement>("#refresh-live")?.addEventListener("click", () => void refreshDashboard());
     document.querySelector<HTMLButtonElement>("#tracking-toggle")?.addEventListener("click", () => void setTrackingPaused(data.preferences));
     bindFindMySurface();
+    bindFindMyDeviceDetails(data.live, (path) => apiRequest<FindMyDeviceDetail>(path));
 
     if (refreshTimer) window.clearInterval(refreshTimer);
     refreshTimer = window.setInterval(() => void refreshDashboard(), refreshIntervalMs);
