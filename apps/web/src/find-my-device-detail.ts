@@ -3,18 +3,26 @@ import type { FindMyLiveDevice, FindMyLocationSample, FindMyRecoveryDevice } fro
 
 export type FindMyDeviceDetail = {
   device: FindMyRecoveryDevice;
-  last_location: (FindMyLocationSample & {
-    id: string;
-    device_id: string;
-    client_sample_id?: string;
-    server_received_at?: string;
-    altitude_m?: number;
-    speed_mps?: number;
-    bearing_deg?: number;
-  }) | null;
+  last_location: FindMyPersistedLocation | null;
 };
 
-type DeviceDetailRequest = (path: string) => Promise<FindMyDeviceDetail>;
+export type FindMyPersistedLocation = FindMyLocationSample & {
+  id: string;
+  device_id: string;
+  client_sample_id?: string;
+  server_received_at?: string;
+  altitude_m?: number;
+  speed_mps?: number;
+  bearing_deg?: number;
+};
+
+export type FindMyLocationHistoryResponse = {
+  locations: FindMyPersistedLocation[];
+};
+
+type DeviceDetailRequest = <T>(path: string) => Promise<T>;
+
+const FIND_MY_HISTORY_LIMIT = 10;
 
 function escapeHTML(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
@@ -74,7 +82,7 @@ function renderLoading(dialog: HTMLDialogElement, displayName: string): void {
   content.innerHTML = `
     <span class="eyebrow">Owner-scoped device detail</span>
     <h2 id="find-device-detail-title">${escapeHTML(displayName)}</h2>
-    <p class="find-detail-status" role="status">Loading the latest persisted device state…</p>`;
+    <p class="find-detail-status" role="status">Loading persisted device state and bounded location history…</p>`;
 }
 
 function renderFailure(dialog: HTMLDialogElement): void {
@@ -83,10 +91,14 @@ function renderFailure(dialog: HTMLDialogElement): void {
   content.innerHTML = `
     <span class="eyebrow">Owner-scoped device detail</span>
     <h2 id="find-device-detail-title">Device detail unavailable</h2>
-    <p class="find-detail-status" role="alert">The authoritative device detail could not be loaded. No recovery command was attempted.</p>`;
+    <p class="find-detail-status" role="alert">The authoritative device detail or history could not be loaded. No recovery command was attempted.</p>`;
 }
 
-function renderDetail(dialog: HTMLDialogElement, detail: FindMyDeviceDetail): void {
+function renderDetail(
+  dialog: HTMLDialogElement,
+  detail: FindMyDeviceDetail,
+  history: FindMyLocationHistoryResponse,
+): void {
   const content = dialog.querySelector<HTMLElement>("#find-device-detail-content");
   if (!content) return;
   const location = detail.last_location;
@@ -95,6 +107,9 @@ function renderDetail(dialog: HTMLDialogElement, detail: FindMyDeviceDetail): vo
   const coordinates = location
     ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`
     : "No persisted location sample";
+  const locations = Array.isArray(history.locations)
+    ? history.locations.filter((sample) => sample.device_id === device.device_id).slice(0, FIND_MY_HISTORY_LIMIT)
+    : [];
 
   content.innerHTML = `
     <div class="find-detail-heading">
@@ -124,6 +139,18 @@ function renderDetail(dialog: HTMLDialogElement, detail: FindMyDeviceDetail): vo
       <p class="find-detail-note">This is the latest persisted authorized sample. It is not a current connectivity, nearby-finding, or offline-network proof.</p>
     </section>
 
+    <section class="find-detail-section" aria-labelledby="find-detail-history-title">
+      <div class="find-detail-section-heading find-detail-history-heading">
+        <div>
+          <span class="eyebrow">Owner-scoped history</span>
+          <h3 id="find-detail-history-title">Recent persisted samples</h3>
+        </div>
+        <span>${locations.length} of at most ${FIND_MY_HISTORY_LIMIT}</span>
+      </div>
+      ${renderHistory(locations)}
+      <p class="find-detail-note">History comes from the existing authenticated <code>/api/v1/locations</code> read, filtered to this device and bounded to ${FIND_MY_HISTORY_LIMIT} newest persisted samples. It does not infer movement between samples or prove device reachability.</p>
+    </section>
+
     <section class="find-detail-section" aria-labelledby="find-detail-recovery-title">
       <div class="find-detail-section-heading">
         <span class="eyebrow">Recovery gate</span>
@@ -136,6 +163,29 @@ function renderDetail(dialog: HTMLDialogElement, detail: FindMyDeviceDetail): vo
       </div>
       <p class="find-detail-note">These controls mirror the server-authoritative capability gate. This UI never promotes a denied or unimplemented capability into an executable action.</p>
     </section>`;
+}
+
+function renderHistory(locations: FindMyPersistedLocation[]): string {
+  if (locations.length === 0) {
+    return `<div class="find-detail-history-empty">No persisted samples are available for this device.</div>`;
+  }
+
+  return `<ol class="find-detail-history-list">
+    ${locations.map((sample) => {
+      const coordinates = `${sample.latitude.toFixed(5)}, ${sample.longitude.toFixed(5)}`;
+      return `<li>
+        <div class="find-detail-history-time">
+          <strong>${escapeHTML(formatTimestamp(sample.captured_at))}</strong>
+          <span>${escapeHTML(formatTimestamp(sample.server_received_at))}</span>
+        </div>
+        <div class="find-detail-history-position">
+          <strong>${escapeHTML(coordinates)}</strong>
+          <span>${escapeHTML(formatNumber(sample.accuracy_m, " m accuracy"))}</span>
+        </div>
+        <span class="find-detail-history-source">${escapeHTML(sample.source || "Not reported")}</span>
+      </li>`;
+    }).join("")}
+  </ol>`;
 }
 
 function renderRecoveryCapability(
@@ -171,8 +221,12 @@ export function bindFindMyDeviceDetails(entries: FindMyLiveDevice[], request: De
       renderLoading(dialog, entry.device.display_name);
       if (!dialog.open) dialog.showModal();
       try {
-        const detail = await request(`/api/v1/find-my/devices/${encodeURIComponent(entry.device.id)}`);
-        renderDetail(dialog, detail);
+        const deviceId = encodeURIComponent(entry.device.id);
+        const [detail, history] = await Promise.all([
+          request<FindMyDeviceDetail>(`/api/v1/find-my/devices/${deviceId}`),
+          request<FindMyLocationHistoryResponse>(`/api/v1/locations?device_id=${deviceId}&limit=${FIND_MY_HISTORY_LIMIT}`),
+        ]);
+        renderDetail(dialog, detail, history);
       } catch {
         renderFailure(dialog);
       }
