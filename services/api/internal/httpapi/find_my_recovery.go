@@ -27,12 +27,13 @@ type findMyRecoveryDeviceResponse struct {
 	Capabilities recoveryCapabilities `json:"capabilities"`
 }
 
-// FindMyRecoveryRoutes exposes owner-scoped recovery capability state without
-// creating recovery command authority. It reuses the same user authentication
-// middleware as ordinary account/device APIs.
+// FindMyRecoveryRoutes exposes owner-scoped Find My read state without creating
+// recovery command authority. It reuses the same user authentication middleware
+// as ordinary account/device APIs.
 func (api *API) FindMyRecoveryRoutes() http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("GET /api/v1/find-my/recovery-capabilities", api.requireUser(http.HandlerFunc(api.getFindMyRecoveryCapabilities)))
+	mux.Handle("GET /api/v1/find-my/devices/{deviceID}", api.requireUser(http.HandlerFunc(api.getFindMyDeviceDetail)))
 	return mux
 }
 
