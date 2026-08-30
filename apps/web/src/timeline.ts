@@ -20,6 +20,14 @@ export type TimelineSample = {
 };
 
 const timelineLimit = 50;
+const timelineWindows = Object.freeze({
+  all: null,
+  "1h": 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+});
+
+type TimelineWindow = keyof typeof timelineWindows;
 
 function escapeHTML(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
@@ -44,6 +52,14 @@ function formatCoordinates(sample: TimelineSample): string {
   return `${sample.latitude.toFixed(5)}, ${sample.longitude.toFixed(5)}`;
 }
 
+export function timelineSampleMatchesWindow(capturedAt: string, window: TimelineWindow, now = Date.now()): boolean {
+  const windowMs = timelineWindows[window];
+  if (windowMs == null) return true;
+  const captured = Date.parse(capturedAt);
+  if (!Number.isFinite(captured)) return false;
+  return captured <= now && captured >= now - windowMs;
+}
+
 export function renderTimelineSurface(devices: TimelineDevice[], samples: TimelineSample[]): string {
   const boundedSamples = samples.slice(0, timelineLimit);
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
@@ -59,20 +75,32 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
           <h2 id="timeline-title">Recent persisted history</h2>
           <p>Read-only history from your authenticated Location account. This view does not infer routes, stops, visits, or movement between samples.</p>
         </div>
-        <label class="timeline-filter" for="timeline-device-filter">
-          <span>Device</span>
-          <select id="timeline-device-filter">
-            <option value="all">All devices</option>
-            ${deviceOptions}
-          </select>
-        </label>
+        <div class="timeline-filters" aria-label="Timeline filters">
+          <label class="timeline-filter" for="timeline-device-filter">
+            <span>Device</span>
+            <select id="timeline-device-filter">
+              <option value="all">All devices</option>
+              ${deviceOptions}
+            </select>
+          </label>
+          <label class="timeline-filter" for="timeline-time-filter">
+            <span>Time</span>
+            <select id="timeline-time-filter">
+              <option value="all">Loaded history</option>
+              <option value="1h">Past hour</option>
+              <option value="24h">Past 24 hours</option>
+              <option value="7d">Past 7 days</option>
+            </select>
+          </label>
+        </div>
       </div>
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Showing at most ${timelineLimit} owner-scoped samples returned by the existing authenticated history API. Filtering happens only in this loaded view.</span>
+        <span>Showing at most ${timelineLimit} owner-scoped samples returned by the existing authenticated history API. Device and time filtering happen only in this loaded view.</span>
       </div>
 
+      <p class="timeline-filter-status" id="timeline-filter-status" role="status">Showing ${boundedSamples.length} loaded sample${boundedSamples.length === 1 ? "" : "s"}.</p>
       <ol class="timeline-list" id="timeline-list">
         ${boundedSamples.length ? boundedSamples.map((sample) => renderTimelineItem(sample, deviceNames)).join("") : `
           <li class="timeline-empty">
@@ -86,7 +114,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
 function renderTimelineItem(sample: TimelineSample, deviceNames: Map<string, string>): string {
   const deviceName = deviceNames.get(sample.device_id) ?? "Enrolled device";
   return `
-    <li class="timeline-item" data-timeline-device="${escapeHTML(sample.device_id)}">
+    <li class="timeline-item" data-timeline-device="${escapeHTML(sample.device_id)}" data-timeline-captured-at="${escapeHTML(sample.captured_at)}">
       <span class="timeline-marker" aria-hidden="true"></span>
       <article>
         <div class="timeline-item-topline">
@@ -106,14 +134,28 @@ function renderTimelineItem(sample: TimelineSample, deviceNames: Map<string, str
 }
 
 export function bindTimelineSurface(): void {
-  const filter = document.querySelector<HTMLSelectElement>("#timeline-device-filter");
+  const deviceFilter = document.querySelector<HTMLSelectElement>("#timeline-device-filter");
+  const timeFilter = document.querySelector<HTMLSelectElement>("#timeline-time-filter");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
-  if (!filter || !list) return;
+  const status = document.querySelector<HTMLElement>("#timeline-filter-status");
+  if (!deviceFilter || !timeFilter || !list || !status) return;
 
-  filter.addEventListener("change", () => {
-    const selected = filter.value;
-    for (const item of list.querySelectorAll<HTMLElement>("[data-timeline-device]")) {
-      item.hidden = selected !== "all" && item.dataset.timelineDevice !== selected;
+  const applyFilters = () => {
+    const selectedDevice = deviceFilter.value;
+    const selectedWindow = timeFilter.value as TimelineWindow;
+    const now = Date.now();
+    let visible = 0;
+
+    for (const item of list.querySelectorAll<HTMLElement>("[data-timeline-device][data-timeline-captured-at]")) {
+      const deviceMatches = selectedDevice === "all" || item.dataset.timelineDevice === selectedDevice;
+      const timeMatches = timelineSampleMatchesWindow(item.dataset.timelineCapturedAt ?? "", selectedWindow, now);
+      item.hidden = !(deviceMatches && timeMatches);
+      if (!item.hidden) visible += 1;
     }
-  });
+
+    status.textContent = `Showing ${visible} loaded sample${visible === 1 ? "" : "s"} after local filters.`;
+  };
+
+  deviceFilter.addEventListener("change", applyFilters);
+  timeFilter.addEventListener("change", applyFilters);
 }
