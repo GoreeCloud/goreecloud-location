@@ -2,7 +2,7 @@
 
 ## Current availability
 
-GoreeCloud Location is in **Development** and is not production-ready. The current repository includes an authenticated Development web experience, native API/service foundations, a validated Development PostgreSQL/PostGIS runtime, device-authenticated location ingestion, owner-scoped live/history reads, tracking pause/resume, an owner-scoped Find My device-state surface, and a server-authoritative Find My recovery-capability gate.
+GoreeCloud Location is in **Development** and is not production-ready. The current repository includes an authenticated Development web experience, native API/service foundations, a validated Development PostgreSQL/PostGIS runtime, device-authenticated location ingestion, owner-scoped live/history reads, tracking pause/resume, an owner-scoped read-only Timeline, an owner-scoped Find My device-state surface, and a server-authoritative Find My recovery-capability gate.
 
 ## Sign in to a Development environment
 
@@ -34,6 +34,24 @@ The current Development web experience can request tracking pause/resume through
 
 A revoked device credential or server-side pause state must prevent new accepted samples even if a client continues trying to upload them.
 
+## Timeline and location history
+
+The Timeline is a read-only view of history owned by the authenticated user. It shows at most 50 samples for each request and can display capture time, coordinates, accuracy, source, and server-received time.
+
+The current filters are:
+
+- **All devices** or one enrolled device;
+- **Latest 50**;
+- **Past hour**;
+- **Past 24 hours**; and
+- **Past 7 days**.
+
+Selecting a device or time window sends bounded filters to the authenticated Location history API. The server applies the owner scope and accepts only the existing bounded `device_id`, `from`, `to`, and `limit` contract. The client is not treating an already loaded 50-row list as the complete account history. If a filtered request fails, the existing Timeline remains visible and the failure is reported instead of being presented as an empty history.
+
+Timeline samples are discrete history records. The current interface does **not** infer routes, visits, stops, trips, transport modes, geofences, or current network connectivity from those records.
+
+History remains private to the authenticated owner unless and until an explicit sharing feature is implemented and accepted. Current source does not establish public links or general user-to-user sharing.
+
 ## Find My device state
 
 The current Find My Development surface lists/searches devices owned by the authenticated user and presents bounded recovery-oriented device state such as:
@@ -48,15 +66,11 @@ These labels are Development presentation states. In particular, **Offline** is 
 
 ### Recovery actions
 
-The Find My client now asks the authenticated Location API for owner-scoped recovery capability state. Lost Mode, Play Sound, and Mark Found remain disabled unless a future server contract explicitly authorizes them.
+The Find My client asks the authenticated Location API for owner-scoped recovery capability state. Lost Mode, Play Sound, and Mark Found remain disabled unless a future server contract explicitly authorizes them.
 
 Current server behavior denies all three actions. Active enrollments report `recovery_authority_unavailable`; revoked enrollments report `device_enrollment_revoked`. If the capability response cannot be loaded, the client also keeps recovery controls disabled.
 
 This means the current interface has an authoritative **deny** contract, not recovery command authority. The repository still does **not** establish Lost Mode execution, remote erase, nearby finding, offline finding, Find My Network participation, anti-stalking runtime acceptance, or other production recovery authority.
-
-## Location history
-
-The current API supports owner-scoped location history reads with bounded filters. History remains private to the authenticated owner unless and until an explicit sharing feature is implemented and accepted. Current source does not establish public links or general user-to-user sharing.
 
 ## Device enrollment and revocation
 
@@ -79,6 +93,6 @@ Location data is highly sensitive.
 
 ## Current limitations
 
-The Development source does not establish production GoreeCloud Identity integration, production mapping/geocoding/routing, Android background collection acceptance, offline synchronization, sharing, places/trips/geofences, production Find My recovery commands, offline finding, anti-stalking acceptance, production deployment, signed release, or Stable qualification.
+The Development source does not establish production GoreeCloud Identity integration, production mapping/geocoding/routing, Android background collection acceptance, offline synchronization, sharing, places/trips/geofences, Timeline retention/purge/export controls, production Find My recovery commands, offline finding, anti-stalking acceptance, production deployment, signed release, or Stable qualification.
 
 Refer to `README.md`, `SPECIFICATIONS.md`, and the `docs/` directory for detailed architecture and acceptance boundaries.
