@@ -289,7 +289,7 @@ async function renderApplication(): Promise<void> {
     });
     document.querySelector<HTMLButtonElement>("#refresh-live")?.addEventListener("click", () => void refreshDashboard());
     document.querySelector<HTMLButtonElement>("#tracking-toggle")?.addEventListener("click", () => void setTrackingPaused(data.preferences));
-    bindTimelineSurface();
+    bindTimelineSurface(data.live, (path) => apiRequest<{ locations: LocationSample[] }>(path));
     bindFindMySurface();
     bindFindMyDeviceDetails(data.live, apiRequest);
 
