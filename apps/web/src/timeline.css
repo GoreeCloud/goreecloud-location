@@ -23,10 +23,18 @@
   color: var(--text-muted, #5f6878);
 }
 
+.timeline-filters {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .timeline-filter {
   display: grid;
   gap: 6px;
-  min-width: min(260px, 100%);
+  min-width: min(200px, 100%);
   font-size: 0.82rem;
   font-weight: 700;
 }
@@ -57,9 +65,15 @@
   white-space: nowrap;
 }
 
+.timeline-filter-status {
+  margin: 18px 0 0;
+  color: var(--text-muted, #5f6878);
+  font-size: 0.86rem;
+}
+
 .timeline-list {
   list-style: none;
-  margin: 24px 0 0;
+  margin: 12px 0 0;
   padding: 0;
 }
 
@@ -171,6 +185,12 @@
   .timeline-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .timeline-filters {
+    align-items: stretch;
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .timeline-filter {
