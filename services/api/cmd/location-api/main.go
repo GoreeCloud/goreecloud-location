@@ -61,8 +61,9 @@ func main() {
 
 	accountAPI := httpapi.New(pool, logger)
 	trackingAPI := httpapi.NewTracking(pool, logger)
+	historyControlAPI := httpapi.NewHistoryControl(pool, logger)
 	recoveryAPI := accountAPI.FindMyRecoveryRoutes()
-	api := combinedAPIHandler(accountAPI, trackingAPI, recoveryAPI)
+	api := combinedAPIHandler(accountAPI, trackingAPI, historyControlAPI, recoveryAPI)
 	server := newServer(addressFromEnvironment(), logger, func(ctx context.Context) error {
 		if err := httpapi.Readiness(ctx, pool); err != nil {
 			var connectedDatabase string
@@ -81,9 +82,11 @@ func main() {
 	}
 }
 
-func combinedAPIHandler(accountAPI, trackingAPI, recoveryAPI http.Handler) http.Handler {
+func combinedAPIHandler(accountAPI, trackingAPI, historyControlAPI, recoveryAPI http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/v1/locations":
+			historyControlAPI.ServeHTTP(w, r)
 		case r.URL.Path == "/api/v1/locations", r.URL.Path == "/api/v1/live":
 			trackingAPI.ServeHTTP(w, r)
 		case strings.HasPrefix(r.URL.Path, "/api/v1/find-my/"):
