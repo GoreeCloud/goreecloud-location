@@ -56,7 +56,7 @@ The Development web client can use an interim session-scoped user credential to 
 
 The Live experience supports authenticated identity, live/last-known device state, sample age, accuracy, optional battery information, stale/no-location states, manual refresh, periodic automatic refresh, and server-enforced tracking pause/resume.
 
-The read-only Timeline reuses the same authenticated owner-scoped history API and renders at most 50 newest persisted samples. It provides an in-view enrolled-device filter and shows capture time, coordinates, accuracy, source, and server-received time. Timeline does not infer a route, visit, stay, trip, transport mode, geofence, or current connectivity state from historical samples.
+The read-only Timeline reuses the authenticated owner-scoped history API and renders at most 50 persisted samples per request. The Timeline device filter and Past hour / Past 24 hours / Past 7 days selections now issue bounded `device_id`, `from`, `to`, and `limit=50` history queries to the existing server contract rather than treating a previously loaded 50-row snapshot as complete history. The server remains authoritative for owner scope. A failed filter request preserves the previously rendered Timeline instead of presenting failure as an empty history. Timeline does not infer a route, visit, stay, trip, transport mode, geofence, or current connectivity state from historical samples.
 
 The browser never supplies an authoritative user ID; the server derives ownership from the authenticated credential.
 
@@ -87,6 +87,8 @@ Current source does **not** establish Lost Mode execution, remote erase, nearby 
 The first-party API is versioned under `/api/v1/`. Ownership comes from authenticated user/device credentials, never request-supplied user identifiers.
 
 Current Development endpoints include health/readiness, authenticated identity, owner-scoped device listing/enrollment/revocation, owner preferences/tracking pause, authenticated device identity, device-authenticated location ingestion, owner-scoped location history, owner-scoped live state, and owner-scoped Find My recovery capability state.
+
+The owner-scoped history endpoint accepts bounded device/time/range filters and limit constraints. Those filters narrow an already authenticated owner's history; they do not grant access to another user's samples.
 
 The ingestion path validates bounded sample data, derives ownership from the device credential, rejects user-session credentials for device ingestion, enforces idempotency, rechecks revocation, enforces tracking pause in the transaction, and stores location through the PostGIS ownership schema.
 

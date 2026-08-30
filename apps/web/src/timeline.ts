@@ -19,6 +19,12 @@ export type TimelineSample = {
   source: string;
 };
 
+export type TimelineHistoryResponse = {
+  locations: TimelineSample[];
+};
+
+export type TimelineHistoryLoader = (path: string) => Promise<TimelineHistoryResponse>;
+
 const timelineLimit = 50;
 const timelineWindows = Object.freeze({
   all: null,
@@ -60,6 +66,20 @@ export function timelineSampleMatchesWindow(capturedAt: string, window: Timeline
   return captured <= now && captured >= now - windowMs;
 }
 
+export function timelineHistoryPath(deviceId: string, window: TimelineWindow, now = Date.now()): string {
+  const params = new URLSearchParams({ limit: String(timelineLimit) });
+  const normalizedDevice = deviceId.trim();
+  if (normalizedDevice && normalizedDevice !== "all") params.set("device_id", normalizedDevice);
+
+  const windowMs = timelineWindows[window];
+  if (windowMs != null) {
+    if (!Number.isFinite(now)) throw new TypeError("Timeline query time must be finite.");
+    params.set("from", new Date(now - windowMs).toISOString());
+    params.set("to", new Date(now + 1).toISOString());
+  }
+  return `/api/v1/locations?${params.toString()}`;
+}
+
 export function renderTimelineSurface(devices: TimelineDevice[], samples: TimelineSample[]): string {
   const boundedSamples = samples.slice(0, timelineLimit);
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
@@ -86,7 +106,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
           <label class="timeline-filter" for="timeline-time-filter">
             <span>Time</span>
             <select id="timeline-time-filter">
-              <option value="all">Loaded history</option>
+              <option value="all">Latest 50</option>
               <option value="1h">Past hour</option>
               <option value="24h">Past 24 hours</option>
               <option value="7d">Past 7 days</option>
@@ -97,18 +117,25 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Showing at most ${timelineLimit} owner-scoped samples returned by the existing authenticated history API. Device and time filtering happen only in this loaded view.</span>
+        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned.</span>
       </div>
 
-      <p class="timeline-filter-status" id="timeline-filter-status" role="status">Showing ${boundedSamples.length} loaded sample${boundedSamples.length === 1 ? "" : "s"}.</p>
+      <p class="timeline-filter-status" id="timeline-filter-status" role="status">Showing ${boundedSamples.length} owner-scoped sample${boundedSamples.length === 1 ? "" : "s"}.</p>
       <ol class="timeline-list" id="timeline-list">
-        ${boundedSamples.length ? boundedSamples.map((sample) => renderTimelineItem(sample, deviceNames)).join("") : `
-          <li class="timeline-empty">
-            <strong>No persisted history yet</strong>
-            <span>Location samples will appear here only after an enrolled device reports them to your account.</span>
-          </li>`}
+        ${renderTimelineItems(boundedSamples, deviceNames)}
       </ol>
     </section>`;
+}
+
+function renderTimelineItems(samples: TimelineSample[], deviceNames: Map<string, string>): string {
+  if (samples.length === 0) {
+    return `
+      <li class="timeline-empty">
+        <strong>No persisted history in this bounded view</strong>
+        <span>Location samples appear here only when an enrolled device has reported matching history to your account.</span>
+      </li>`;
+  }
+  return samples.map((sample) => renderTimelineItem(sample, deviceNames)).join("");
 }
 
 function renderTimelineItem(sample: TimelineSample, deviceNames: Map<string, string>): string {
@@ -133,29 +160,42 @@ function renderTimelineItem(sample: TimelineSample, deviceNames: Map<string, str
     </li>`;
 }
 
-export function bindTimelineSurface(): void {
+export function bindTimelineSurface(devices: TimelineDevice[], loadHistory: TimelineHistoryLoader): void {
   const deviceFilter = document.querySelector<HTMLSelectElement>("#timeline-device-filter");
   const timeFilter = document.querySelector<HTMLSelectElement>("#timeline-time-filter");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
   const status = document.querySelector<HTMLElement>("#timeline-filter-status");
   if (!deviceFilter || !timeFilter || !list || !status) return;
 
-  const applyFilters = () => {
+  const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
+  let requestGeneration = 0;
+
+  const applyFilters = async () => {
+    const generation = ++requestGeneration;
     const selectedDevice = deviceFilter.value;
     const selectedWindow = timeFilter.value as TimelineWindow;
-    const now = Date.now();
-    let visible = 0;
+    const path = timelineHistoryPath(selectedDevice, selectedWindow);
 
-    for (const item of list.querySelectorAll<HTMLElement>("[data-timeline-device][data-timeline-captured-at]")) {
-      const deviceMatches = selectedDevice === "all" || item.dataset.timelineDevice === selectedDevice;
-      const timeMatches = timelineSampleMatchesWindow(item.dataset.timelineCapturedAt ?? "", selectedWindow, now);
-      item.hidden = !(deviceMatches && timeMatches);
-      if (!item.hidden) visible += 1;
+    deviceFilter.disabled = true;
+    timeFilter.disabled = true;
+    status.textContent = "Loading owner-scoped history from the authenticated server…";
+    try {
+      const response = await loadHistory(path);
+      if (generation !== requestGeneration) return;
+      const samples = Array.isArray(response.locations) ? response.locations.slice(0, timelineLimit) : [];
+      list.innerHTML = renderTimelineItems(samples, deviceNames);
+      status.textContent = `Showing ${samples.length} server-filtered sample${samples.length === 1 ? "" : "s"}.`;
+    } catch {
+      if (generation !== requestGeneration) return;
+      status.textContent = "The authenticated history request failed. The previous Timeline view has been preserved.";
+    } finally {
+      if (generation === requestGeneration) {
+        deviceFilter.disabled = false;
+        timeFilter.disabled = false;
+      }
     }
-
-    status.textContent = `Showing ${visible} loaded sample${visible === 1 ? "" : "s"} after local filters.`;
   };
 
-  deviceFilter.addEventListener("change", applyFilters);
-  timeFilter.addEventListener("change", applyFilters);
+  deviceFilter.addEventListener("change", () => void applyFilters());
+  timeFilter.addEventListener("change", () => void applyFilters());
 }
