@@ -23,7 +23,13 @@ export type TimelineHistoryResponse = {
   locations: TimelineSample[];
 };
 
+export type TimelineHistoryDeletionResponse = {
+  deleted_count: number;
+  more_may_remain: boolean;
+};
+
 export type TimelineHistoryLoader = (path: string) => Promise<TimelineHistoryResponse>;
+export type TimelineHistoryDeleter = (path: string) => Promise<TimelineHistoryDeletionResponse>;
 
 const timelineLimit = 50;
 const timelineWindows = Object.freeze({
@@ -32,8 +38,15 @@ const timelineWindows = Object.freeze({
   "24h": 24 * 60 * 60 * 1000,
   "7d": 7 * 24 * 60 * 60 * 1000,
 });
+const deletionWindows = Object.freeze({
+  now: 0,
+  "1h": 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+});
 
 type TimelineWindow = keyof typeof timelineWindows;
+type DeletionWindow = keyof typeof deletionWindows;
 
 function escapeHTML(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({
@@ -80,6 +93,16 @@ export function timelineHistoryPath(deviceId: string, window: TimelineWindow, no
   return `/api/v1/locations?${params.toString()}`;
 }
 
+export function timelineHistoryDeletionPath(deviceId: string, window: DeletionWindow, now = Date.now()): string {
+  if (!Number.isFinite(now)) throw new TypeError("Timeline deletion time must be finite.");
+  const params = new URLSearchParams({
+    before: new Date(now - deletionWindows[window]).toISOString(),
+  });
+  const normalizedDevice = deviceId.trim();
+  if (normalizedDevice && normalizedDevice !== "all") params.set("device_id", normalizedDevice);
+  return `/api/v1/locations?${params.toString()}`;
+}
+
 export function renderTimelineSurface(devices: TimelineDevice[], samples: TimelineSample[]): string {
   const boundedSamples = samples.slice(0, timelineLimit);
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
@@ -93,7 +116,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
         <div>
           <span class="eyebrow">Timeline</span>
           <h2 id="timeline-title">Recent persisted history</h2>
-          <p>Read-only history from your authenticated Location account. This view does not infer routes, stops, visits, or movement between samples.</p>
+          <p>Owner-scoped history from your authenticated Location account. This view does not infer routes, stops, visits, or movement between samples.</p>
         </div>
         <div class="timeline-filters" aria-label="Timeline filters">
           <label class="timeline-filter" for="timeline-device-filter">
@@ -118,6 +141,23 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
         <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned.</span>
+      </div>
+
+      <div class="timeline-history-control" aria-labelledby="timeline-history-control-title">
+        <div>
+          <strong id="timeline-history-control-title">History control</strong>
+          <span>Delete one server-bounded batch of up to 500 samples. The server re-checks account ownership and the optional device scope.</span>
+        </div>
+        <label class="timeline-filter" for="timeline-delete-window">
+          <span>Delete samples older than</span>
+          <select id="timeline-delete-window">
+            <option value="7d">7 days</option>
+            <option value="24h">24 hours</option>
+            <option value="1h">1 hour</option>
+            <option value="now">Now (all older history)</option>
+          </select>
+        </label>
+        <button id="timeline-delete-history" class="timeline-delete-button" type="button">Delete one bounded batch</button>
       </div>
 
       <p class="timeline-filter-status" id="timeline-filter-status" role="status">Showing ${boundedSamples.length} owner-scoped sample${boundedSamples.length === 1 ? "" : "s"}.</p>
@@ -160,9 +200,15 @@ function renderTimelineItem(sample: TimelineSample, deviceNames: Map<string, str
     </li>`;
 }
 
-export function bindTimelineSurface(devices: TimelineDevice[], loadHistory: TimelineHistoryLoader): void {
+export function bindTimelineSurface(
+  devices: TimelineDevice[],
+  loadHistory: TimelineHistoryLoader,
+  deleteHistory?: TimelineHistoryDeleter,
+): void {
   const deviceFilter = document.querySelector<HTMLSelectElement>("#timeline-device-filter");
   const timeFilter = document.querySelector<HTMLSelectElement>("#timeline-time-filter");
+  const deletionWindow = document.querySelector<HTMLSelectElement>("#timeline-delete-window");
+  const deleteButton = document.querySelector<HTMLButtonElement>("#timeline-delete-history");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
   const status = document.querySelector<HTMLElement>("#timeline-filter-status");
   if (!deviceFilter || !timeFilter || !list || !status) return;
@@ -170,7 +216,7 @@ export function bindTimelineSurface(devices: TimelineDevice[], loadHistory: Time
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
   let requestGeneration = 0;
 
-  const applyFilters = async () => {
+  const applyFilters = async (): Promise<number | null> => {
     const generation = ++requestGeneration;
     const selectedDevice = deviceFilter.value;
     const selectedWindow = timeFilter.value as TimelineWindow;
@@ -178,24 +224,69 @@ export function bindTimelineSurface(devices: TimelineDevice[], loadHistory: Time
 
     deviceFilter.disabled = true;
     timeFilter.disabled = true;
+    if (deleteButton) deleteButton.disabled = true;
     status.textContent = "Loading owner-scoped history from the authenticated server…";
     try {
       const response = await loadHistory(path);
-      if (generation !== requestGeneration) return;
+      if (generation !== requestGeneration) return null;
       const samples = Array.isArray(response.locations) ? response.locations.slice(0, timelineLimit) : [];
       list.innerHTML = renderTimelineItems(samples, deviceNames);
       status.textContent = `Showing ${samples.length} server-filtered sample${samples.length === 1 ? "" : "s"}.`;
+      return samples.length;
     } catch {
-      if (generation !== requestGeneration) return;
+      if (generation !== requestGeneration) return null;
       status.textContent = "The authenticated history request failed. The previous Timeline view has been preserved.";
+      return null;
     } finally {
       if (generation === requestGeneration) {
         deviceFilter.disabled = false;
         timeFilter.disabled = false;
+        if (deleteButton) deleteButton.disabled = deleteHistory == null;
       }
     }
   };
 
   deviceFilter.addEventListener("change", () => void applyFilters());
   timeFilter.addEventListener("change", () => void applyFilters());
+
+  if (!deleteHistory || !deletionWindow || !deleteButton) {
+    if (deleteButton) {
+      deleteButton.disabled = true;
+      deleteButton.title = "History deletion is unavailable in this runtime.";
+    }
+    return;
+  }
+
+  deleteButton.addEventListener("click", async () => {
+    const selectedDevice = deviceFilter.value;
+    const selectedDeletionWindow = deletionWindow.value as DeletionWindow;
+    const deviceLabel = selectedDevice === "all"
+      ? "all of your enrolled devices"
+      : deviceNames.get(selectedDevice) ?? "the selected enrolled device";
+    const cutoffLabel = deletionWindow.selectedOptions[0]?.textContent ?? "the selected cutoff";
+    const confirmed = window.confirm(
+      `Delete up to 500 owner-scoped Location samples older than ${cutoffLabel} for ${deviceLabel}? This batch cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    const path = timelineHistoryDeletionPath(selectedDevice, selectedDeletionWindow);
+    deleteButton.disabled = true;
+    deletionWindow.disabled = true;
+    deviceFilter.disabled = true;
+    timeFilter.disabled = true;
+    status.textContent = "Deleting one bounded owner-scoped history batch…";
+    try {
+      const result = await deleteHistory(path);
+      const visibleCount = await applyFilters();
+      if (visibleCount == null) return;
+      status.textContent = `Deleted ${result.deleted_count} sample${result.deleted_count === 1 ? "" : "s"}. ${result.more_may_remain ? "More matching history may remain; run another explicitly confirmed batch if desired. " : "No additional matching batch was indicated. "}Showing ${visibleCount} server-filtered sample${visibleCount === 1 ? "" : "s"}.`;
+    } catch {
+      status.textContent = "The authenticated history deletion request failed. No deletion success is being assumed.";
+    } finally {
+      deletionWindow.disabled = false;
+      deviceFilter.disabled = false;
+      timeFilter.disabled = false;
+      deleteButton.disabled = false;
+    }
+  });
 }
