@@ -8,8 +8,35 @@ export type TimelineViewSummary = {
   bestAccuracyM: number | null;
 };
 
+export type TimelinePresentationOrder = "newest" | "oldest";
+
+export function orderTimelinePresentation(
+  samples: TimelineSample[],
+  order: TimelinePresentationOrder = "newest",
+  limit = 50,
+): TimelineSample[] {
+  const boundedLimit = Math.max(0, limit);
+  const decorated = samples.map((sample, index) => ({
+    sample,
+    index,
+    capturedAt: Date.parse(sample.captured_at),
+  }));
+  decorated.sort((left, right) => {
+    const leftValid = Number.isFinite(left.capturedAt);
+    const rightValid = Number.isFinite(right.capturedAt);
+    if (leftValid && rightValid && left.capturedAt !== right.capturedAt) {
+      return order === "oldest"
+        ? left.capturedAt - right.capturedAt
+        : right.capturedAt - left.capturedAt;
+    }
+    if (leftValid !== rightValid) return leftValid ? -1 : 1;
+    return left.index - right.index;
+  });
+  return decorated.slice(0, boundedLimit).map(({ sample }) => sample);
+}
+
 export function summarizeTimelineView(samples: TimelineSample[], limit = 50): TimelineViewSummary {
-  const bounded = samples.slice(0, Math.max(0, limit));
+  const bounded = orderTimelinePresentation(samples, "newest", limit);
   const devices = new Set<string>();
   let earliest: { value: string; timestamp: number } | null = null;
   let latest: { value: string; timestamp: number } | null = null;
