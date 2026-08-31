@@ -293,6 +293,7 @@ async function renderApplication(): Promise<void> {
       data.live,
       (path) => apiRequest<{ locations: LocationSample[] }>(path),
       (path) => apiRequest<{ deleted_count: number; more_may_remain: boolean }>(path, { method: "DELETE" }),
+      data.history,
     );
     bindFindMySurface();
     bindFindMyDeviceDetails(data.live, apiRequest);
