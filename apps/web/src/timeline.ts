@@ -1,5 +1,6 @@
 import "./timeline.css";
 import { timelineHistoryGeoJSON } from "./timeline-geojson";
+import { summarizeTimelineView } from "./timeline-summary";
 
 export type TimelineDevice = {
   device: {
@@ -137,6 +138,19 @@ export function timelineHistoryDeletionPath(deviceId: string, window: DeletionWi
   return `/api/v1/locations?${params.toString()}`;
 }
 
+function renderTimelineSummary(samples: TimelineSample[]): string {
+  const summary = summarizeTimelineView(samples, timelineLimit);
+  const span = summary.earliestCapturedAt && summary.latestCapturedAt
+    ? `${formatTimestamp(summary.earliestCapturedAt)} → ${formatTimestamp(summary.latestCapturedAt)}`
+    : "No valid captured-time range";
+  const accuracy = summary.bestAccuracyM == null ? "—" : `±${Math.round(summary.bestAccuracyM)} m`;
+  return `
+    <div><dt>Samples</dt><dd>${summary.sampleCount}</dd></div>
+    <div><dt>Devices</dt><dd>${summary.deviceCount}</dd></div>
+    <div class="timeline-summary-span"><dt>Captured span</dt><dd>${escapeHTML(span)}</dd></div>
+    <div><dt>Best accuracy</dt><dd>${accuracy}</dd></div>`;
+}
+
 export function renderTimelineSurface(devices: TimelineDevice[], samples: TimelineSample[]): string {
   const boundedSamples = samples.slice(0, timelineLimit);
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
@@ -174,7 +188,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. CSV and GeoJSON exports use only the currently loaded bounded view and make no additional history request.</span>
+        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. The summary and CSV/GeoJSON exports use only the currently loaded bounded view and make no additional history request.</span>
       </div>
 
       <div class="timeline-history-control" aria-labelledby="timeline-history-control-title">
@@ -198,6 +212,9 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
         </div>
       </div>
 
+      <dl class="timeline-summary" id="timeline-summary" aria-label="Current Timeline view summary">
+        ${renderTimelineSummary(boundedSamples)}
+      </dl>
       <p class="timeline-filter-status" id="timeline-filter-status" role="status">Showing ${boundedSamples.length} owner-scoped sample${boundedSamples.length === 1 ? "" : "s"}.</p>
       <ol class="timeline-list" id="timeline-list">
         ${renderTimelineItems(boundedSamples, deviceNames)}
@@ -250,6 +267,7 @@ export function bindTimelineSurface(
   const deleteButton = document.querySelector<HTMLButtonElement>("#timeline-delete-history");
   const csvExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-current");
   const geoJSONExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-geojson");
+  const summary = document.querySelector<HTMLDListElement>("#timeline-summary");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
   const status = document.querySelector<HTMLElement>("#timeline-filter-status");
   if (!deviceFilter || !timeFilter || !list || !status) return;
@@ -263,7 +281,11 @@ export function bindTimelineSurface(
     if (csvExportButton) csvExportButton.disabled = disabled;
     if (geoJSONExportButton) geoJSONExportButton.disabled = disabled;
   };
+  const syncSummary = () => {
+    if (summary) summary.innerHTML = renderTimelineSummary(currentSamples);
+  };
   syncExportButtons();
+  syncSummary();
 
   const downloadLocalExport = (contents: string, mimeType: string, extension: string) => {
     const url = URL.createObjectURL(new Blob([contents], { type: mimeType }));
@@ -308,6 +330,7 @@ export function bindTimelineSurface(
       const samples = Array.isArray(response.locations) ? response.locations.slice(0, timelineLimit) : [];
       currentSamples = samples;
       list.innerHTML = renderTimelineItems(samples, deviceNames);
+      syncSummary();
       status.textContent = `Showing ${samples.length} server-filtered sample${samples.length === 1 ? "" : "s"}.`;
       return samples.length;
     } catch {
