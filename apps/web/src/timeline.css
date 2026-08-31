@@ -229,10 +229,40 @@
   background: var(--surface-muted, rgba(103, 116, 142, 0.08));
 }
 
-.timeline-coordinates {
+.timeline-coordinate-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 12px;
+}
+
+.timeline-coordinates {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-weight: 700;
+}
+
+.timeline-copy-coordinates {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong, rgba(103, 116, 142, 0.34));
+  border-radius: 12px;
+  background: var(--surface-muted, rgba(103, 116, 142, 0.08));
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.timeline-copy-coordinates:hover {
+  background: color-mix(in srgb, var(--accent, #5b68f6) 10%, var(--surface-strong, #fff));
+}
+
+.timeline-copy-coordinates:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent, #5b68f6) 45%, transparent);
+  outline-offset: 2px;
 }
 
 .timeline-facts {
@@ -311,8 +341,14 @@
     grid-column: auto;
   }
 
-  .timeline-item-topline {
+  .timeline-item-topline,
+  .timeline-coordinate-row {
+    align-items: stretch;
     flex-direction: column;
+  }
+
+  .timeline-copy-coordinates {
+    width: 100%;
   }
 
   .timeline-facts {
@@ -327,7 +363,8 @@
   .timeline-summary > div,
   .timeline-filter select,
   .timeline-export-button,
-  .timeline-delete-button {
+  .timeline-delete-button,
+  .timeline-copy-coordinates {
     border-width: 2px;
   }
 }
@@ -341,7 +378,8 @@
   }
 
   .timeline-export-button,
-  .timeline-delete-button {
+  .timeline-delete-button,
+  .timeline-copy-coordinates {
     color: ButtonText;
   }
 }
