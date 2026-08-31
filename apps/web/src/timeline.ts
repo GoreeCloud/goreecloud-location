@@ -1,4 +1,5 @@
 import "./timeline.css";
+import { timelineHistoryGeoJSON } from "./timeline-geojson";
 
 export type TimelineDevice = {
   device: {
@@ -173,13 +174,13 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. Export uses only the currently loaded bounded view and makes no additional history request.</span>
+        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. CSV and GeoJSON exports use only the currently loaded bounded view and make no additional history request.</span>
       </div>
 
       <div class="timeline-history-control" aria-labelledby="timeline-history-control-title">
         <div>
           <strong id="timeline-history-control-title">History control</strong>
-          <span>Export the current view locally, or delete one server-bounded batch of up to 500 samples. The server re-checks account ownership and the optional device scope for deletion.</span>
+          <span>Export the current point samples locally in open formats, or delete one server-bounded batch of up to 500 samples. Exports do not infer paths or trips. The server re-checks account ownership and the optional device scope for deletion.</span>
         </div>
         <label class="timeline-filter" for="timeline-delete-window">
           <span>Delete samples older than</span>
@@ -191,7 +192,8 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
           </select>
         </label>
         <div class="timeline-history-actions">
-          <button id="timeline-export-current" class="timeline-export-button" type="button">Export current view (CSV)</button>
+          <button id="timeline-export-current" class="timeline-export-button" type="button">Export CSV</button>
+          <button id="timeline-export-geojson" class="timeline-export-button" type="button">Export GeoJSON</button>
           <button id="timeline-delete-history" class="timeline-delete-button" type="button">Delete one bounded batch</button>
         </div>
       </div>
@@ -246,7 +248,8 @@ export function bindTimelineSurface(
   const timeFilter = document.querySelector<HTMLSelectElement>("#timeline-time-filter");
   const deletionWindow = document.querySelector<HTMLSelectElement>("#timeline-delete-window");
   const deleteButton = document.querySelector<HTMLButtonElement>("#timeline-delete-history");
-  const exportButton = document.querySelector<HTMLButtonElement>("#timeline-export-current");
+  const csvExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-current");
+  const geoJSONExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-geojson");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
   const status = document.querySelector<HTMLElement>("#timeline-filter-status");
   if (!deviceFilter || !timeFilter || !list || !status) return;
@@ -255,24 +258,36 @@ export function bindTimelineSurface(
   let requestGeneration = 0;
   let currentSamples = initialSamples.slice(0, timelineLimit);
 
-  const syncExportButton = () => {
-    if (exportButton) exportButton.disabled = currentSamples.length === 0;
+  const syncExportButtons = () => {
+    const disabled = currentSamples.length === 0;
+    if (csvExportButton) csvExportButton.disabled = disabled;
+    if (geoJSONExportButton) geoJSONExportButton.disabled = disabled;
   };
-  syncExportButton();
+  syncExportButtons();
 
-  exportButton?.addEventListener("click", () => {
-    if (currentSamples.length === 0) return;
-    const csv = `\uFEFF${timelineHistoryCSV(currentSamples, deviceNames)}`;
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const downloadLocalExport = (contents: string, mimeType: string, extension: string) => {
+    const url = URL.createObjectURL(new Blob([contents], { type: mimeType }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `goreecloud-location-timeline-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `goreecloud-location-timeline-${new Date().toISOString().slice(0, 10)}.${extension}`;
     link.hidden = true;
     document.body.append(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    status.textContent = `Exported ${currentSamples.length} currently loaded sample${currentSamples.length === 1 ? "" : "s"} locally. No additional history request was made.`;
+  };
+
+  csvExportButton?.addEventListener("click", () => {
+    if (currentSamples.length === 0) return;
+    downloadLocalExport(`\uFEFF${timelineHistoryCSV(currentSamples, deviceNames)}`, "text/csv;charset=utf-8", "csv");
+    status.textContent = `Exported ${currentSamples.length} currently loaded sample${currentSamples.length === 1 ? "" : "s"} as CSV locally. No additional history request was made.`;
+  });
+
+  geoJSONExportButton?.addEventListener("click", () => {
+    if (currentSamples.length === 0) return;
+    const geoJSON = timelineHistoryGeoJSON(currentSamples, deviceNames, timelineLimit);
+    downloadLocalExport(`${JSON.stringify(geoJSON, null, 2)}\n`, "application/geo+json;charset=utf-8", "geojson");
+    status.textContent = `Exported ${currentSamples.length} currently loaded point sample${currentSamples.length === 1 ? "" : "s"} as GeoJSON locally. No route or additional history was inferred or requested.`;
   });
 
   const applyFilters = async (): Promise<number | null> => {
@@ -284,7 +299,8 @@ export function bindTimelineSurface(
     deviceFilter.disabled = true;
     timeFilter.disabled = true;
     if (deleteButton) deleteButton.disabled = true;
-    if (exportButton) exportButton.disabled = true;
+    if (csvExportButton) csvExportButton.disabled = true;
+    if (geoJSONExportButton) geoJSONExportButton.disabled = true;
     status.textContent = "Loading owner-scoped history from the authenticated server…";
     try {
       const response = await loadHistory(path);
@@ -303,7 +319,7 @@ export function bindTimelineSurface(
         deviceFilter.disabled = false;
         timeFilter.disabled = false;
         if (deleteButton) deleteButton.disabled = deleteHistory == null;
-        syncExportButton();
+        syncExportButtons();
       }
     }
   };
@@ -336,7 +352,8 @@ export function bindTimelineSurface(
     deletionWindow.disabled = true;
     deviceFilter.disabled = true;
     timeFilter.disabled = true;
-    if (exportButton) exportButton.disabled = true;
+    if (csvExportButton) csvExportButton.disabled = true;
+    if (geoJSONExportButton) geoJSONExportButton.disabled = true;
     status.textContent = "Deleting one bounded owner-scoped history batch…";
     try {
       const result = await deleteHistory(path);
@@ -350,7 +367,7 @@ export function bindTimelineSurface(
       deviceFilter.disabled = false;
       timeFilter.disabled = false;
       deleteButton.disabled = false;
-      syncExportButton();
+      syncExportButtons();
     }
   });
 }
