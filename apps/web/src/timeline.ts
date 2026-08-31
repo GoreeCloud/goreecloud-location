@@ -1,5 +1,6 @@
 import "./timeline.css";
 import { timelineHistoryGeoJSON } from "./timeline-geojson";
+import { timelineHistoryGPX } from "./timeline-gpx";
 import { summarizeTimelineView } from "./timeline-summary";
 
 export type TimelineDevice = {
@@ -191,13 +192,13 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. The summary, coordinate-copy action, and CSV/GeoJSON exports operate only on the currently loaded bounded view and make no additional history request.</span>
+        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. The summary, coordinate-copy action, and CSV/GeoJSON/GPX exports operate only on the currently loaded bounded view and make no additional history request.</span>
       </div>
 
       <div class="timeline-history-control" aria-labelledby="timeline-history-control-title">
         <div>
           <strong id="timeline-history-control-title">History control</strong>
-          <span>Export the current point samples locally in open formats, or delete one server-bounded batch of up to 500 samples. Exports do not infer paths or trips. The server re-checks account ownership and the optional device scope for deletion.</span>
+          <span>Export the current point samples locally in open formats, or delete one server-bounded batch of up to 500 samples. GeoJSON and GPX exports preserve independent points/waypoints and do not infer paths or trips. The server re-checks account ownership and the optional device scope for deletion.</span>
         </div>
         <label class="timeline-filter" for="timeline-delete-window">
           <span>Delete samples older than</span>
@@ -211,6 +212,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
         <div class="timeline-history-actions">
           <button id="timeline-export-current" class="timeline-export-button" type="button">Export CSV</button>
           <button id="timeline-export-geojson" class="timeline-export-button" type="button">Export GeoJSON</button>
+          <button id="timeline-export-gpx" class="timeline-export-button" type="button">Export GPX</button>
           <button id="timeline-delete-history" class="timeline-delete-button" type="button">Delete one bounded batch</button>
         </div>
       </div>
@@ -274,6 +276,7 @@ export function bindTimelineSurface(
   const deleteButton = document.querySelector<HTMLButtonElement>("#timeline-delete-history");
   const csvExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-current");
   const geoJSONExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-geojson");
+  const gpxExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-gpx");
   const summary = document.querySelector<HTMLDListElement>("#timeline-summary");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
   const status = document.querySelector<HTMLElement>("#timeline-filter-status");
@@ -287,6 +290,7 @@ export function bindTimelineSurface(
     const disabled = currentSamples.length === 0;
     if (csvExportButton) csvExportButton.disabled = disabled;
     if (geoJSONExportButton) geoJSONExportButton.disabled = disabled;
+    if (gpxExportButton) gpxExportButton.disabled = disabled;
   };
   const syncSummary = () => {
     if (summary) summary.innerHTML = renderTimelineSummary(currentSamples);
@@ -319,6 +323,13 @@ export function bindTimelineSurface(
     status.textContent = `Exported ${currentSamples.length} currently loaded point sample${currentSamples.length === 1 ? "" : "s"} as GeoJSON locally. No route or additional history was inferred or requested.`;
   });
 
+  gpxExportButton?.addEventListener("click", () => {
+    if (currentSamples.length === 0) return;
+    const gpx = timelineHistoryGPX(currentSamples, deviceNames, timelineLimit);
+    downloadLocalExport(gpx, "application/gpx+xml;charset=utf-8", "gpx");
+    status.textContent = `Exported ${currentSamples.length} currently loaded waypoint${currentSamples.length === 1 ? "" : "s"} as GPX locally. No track, route, or additional history was inferred or requested.`;
+  });
+
   list.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLButtonElement)) return;
@@ -344,6 +355,7 @@ export function bindTimelineSurface(
     if (deleteButton) deleteButton.disabled = true;
     if (csvExportButton) csvExportButton.disabled = true;
     if (geoJSONExportButton) geoJSONExportButton.disabled = true;
+    if (gpxExportButton) gpxExportButton.disabled = true;
     status.textContent = "Loading owner-scoped history from the authenticated server…";
     try {
       const response = await loadHistory(path);
@@ -398,6 +410,7 @@ export function bindTimelineSurface(
     timeFilter.disabled = true;
     if (csvExportButton) csvExportButton.disabled = true;
     if (geoJSONExportButton) geoJSONExportButton.disabled = true;
+    if (gpxExportButton) gpxExportButton.disabled = true;
     status.textContent = "Deleting one bounded owner-scoped history batch…";
     try {
       const result = await deleteHistory(path);
