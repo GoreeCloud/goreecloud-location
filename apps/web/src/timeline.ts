@@ -76,10 +76,6 @@ export function timelineCoordinateText(sample: Pick<TimelineSample, "latitude" |
   return `${sample.latitude.toFixed(5)}, ${sample.longitude.toFixed(5)}`;
 }
 
-function formatCoordinates(sample: TimelineSample): string {
-  return timelineCoordinateText(sample);
-}
-
 function csvCell(value: string | number | undefined, protectSpreadsheetFormula = false): string {
   let text = value == null ? "" : String(value);
   if (protectSpreadsheetFormula && /^[=+\-@]/.test(text)) text = `'${text}`;
