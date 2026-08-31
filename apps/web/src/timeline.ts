@@ -69,8 +69,15 @@ function formatTimestamp(value: string): string {
   }).format(new Date(timestamp));
 }
 
-function formatCoordinates(sample: TimelineSample): string {
+export function timelineCoordinateText(sample: Pick<TimelineSample, "latitude" | "longitude">): string {
+  if (!Number.isFinite(sample.latitude) || !Number.isFinite(sample.longitude)) {
+    throw new TypeError("Timeline coordinates must be finite.");
+  }
   return `${sample.latitude.toFixed(5)}, ${sample.longitude.toFixed(5)}`;
+}
+
+function formatCoordinates(sample: TimelineSample): string {
+  return timelineCoordinateText(sample);
 }
 
 function csvCell(value: string | number | undefined, protectSpreadsheetFormula = false): string {
@@ -188,7 +195,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. The summary and CSV/GeoJSON exports use only the currently loaded bounded view and make no additional history request.</span>
+        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. The summary, coordinate-copy action, and CSV/GeoJSON exports operate only on the currently loaded bounded view and make no additional history request.</span>
       </div>
 
       <div class="timeline-history-control" aria-labelledby="timeline-history-control-title">
@@ -235,6 +242,7 @@ function renderTimelineItems(samples: TimelineSample[], deviceNames: Map<string,
 
 function renderTimelineItem(sample: TimelineSample, deviceNames: Map<string, string>): string {
   const deviceName = deviceNames.get(sample.device_id) ?? "Enrolled device";
+  const coordinates = timelineCoordinateText(sample);
   return `
     <li class="timeline-item" data-timeline-device="${escapeHTML(sample.device_id)}" data-timeline-captured-at="${escapeHTML(sample.captured_at)}">
       <span class="timeline-marker" aria-hidden="true"></span>
@@ -246,7 +254,10 @@ function renderTimelineItem(sample: TimelineSample, deviceNames: Map<string, str
           </div>
           <span class="timeline-source">${escapeHTML(sample.source)}</span>
         </div>
-        <div class="timeline-coordinates">${escapeHTML(formatCoordinates(sample))}</div>
+        <div class="timeline-coordinate-row">
+          <div class="timeline-coordinates">${escapeHTML(coordinates)}</div>
+          <button class="timeline-copy-coordinates" type="button" data-timeline-copy-coordinate="${escapeHTML(coordinates)}" aria-label="Copy coordinates for ${escapeHTML(deviceName)}">Copy coordinates</button>
+        </div>
         <dl class="timeline-facts">
           <div><dt>Accuracy</dt><dd>${sample.accuracy_m == null ? "—" : `±${Math.round(sample.accuracy_m)} m`}</dd></div>
           <div><dt>Received</dt><dd>${escapeHTML(formatTimestamp(sample.server_received_at))}</dd></div>
@@ -310,6 +321,20 @@ export function bindTimelineSurface(
     const geoJSON = timelineHistoryGeoJSON(currentSamples, deviceNames, timelineLimit);
     downloadLocalExport(`${JSON.stringify(geoJSON, null, 2)}\n`, "application/geo+json;charset=utf-8", "geojson");
     status.textContent = `Exported ${currentSamples.length} currently loaded point sample${currentSamples.length === 1 ? "" : "s"} as GeoJSON locally. No route or additional history was inferred or requested.`;
+  });
+
+  list.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const coordinates = target.dataset.timelineCopyCoordinate;
+    if (!coordinates) return;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(coordinates);
+      status.textContent = `Copied ${coordinates} from the currently loaded Timeline sample. No history request was made.`;
+    } catch {
+      status.textContent = "Clipboard access is unavailable. The current Timeline view was not changed.";
+    }
   });
 
   const applyFilters = async (): Promise<number | null> => {
