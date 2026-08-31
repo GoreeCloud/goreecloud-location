@@ -22,8 +22,8 @@ export function summarizeTimelineView(samples: TimelineSample[], limit = 50): Ti
       if (earliest == null || captured < earliest.timestamp) earliest = { value: sample.captured_at, timestamp: captured };
       if (latest == null || captured > latest.timestamp) latest = { value: sample.captured_at, timestamp: captured };
     }
-    if (Number.isFinite(sample.accuracy_m) && (sample.accuracy_m ?? -1) >= 0) {
-      const accuracy = sample.accuracy_m as number;
+    const accuracy = sample.accuracy_m;
+    if (typeof accuracy === "number" && Number.isFinite(accuracy) && accuracy >= 0) {
       if (bestAccuracyM == null || accuracy < bestAccuracyM) bestAccuracyM = accuracy;
     }
   }
