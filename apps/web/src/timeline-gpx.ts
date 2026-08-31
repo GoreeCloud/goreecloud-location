@@ -29,15 +29,14 @@ export function timelineHistoryGPX(
       throw new TypeError("Timeline GPX coordinates must be finite.");
     }
     const name = escapeXML(deviceNames.get(sample.device_id) ?? "Enrolled device");
-    const source = escapeXML(sample.source);
     const accuracy = sample.accuracy_m == null || !Number.isFinite(sample.accuracy_m)
       ? ""
-      : `<hdop>${sample.accuracy_m}</hdop>`;
+      : ` · Accuracy: ±${sample.accuracy_m} m`;
+    const description = escapeXML(`Source: ${sample.source}${accuracy}`);
     return `  <wpt lat="${sample.latitude}" lon="${sample.longitude}">\n` +
       `    <time>${escapeXML(sample.captured_at)}</time>\n` +
       `    <name>${name}</name>\n` +
-      `    <desc>${source}</desc>\n` +
-      (accuracy ? `    ${accuracy}\n` : "") +
+      `    <desc>${description}</desc>\n` +
       "  </wpt>";
   });
 
