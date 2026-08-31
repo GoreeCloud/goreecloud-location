@@ -118,6 +118,6 @@ function bindTimelineAccuracyPresentation(): void {
 
 if (app) {
   const appObserver = new MutationObserver(() => bindTimelineAccuracyPresentation());
-  appObserver.observe(app, { childList: true, subtree: true });
+  appObserver.observe(app, { childList: true });
   bindTimelineAccuracyPresentation();
 }
