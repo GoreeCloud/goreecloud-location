@@ -6,7 +6,7 @@ GoreeCloud Location is GoreeCloud's privacy-first, first-party location applicat
 
 **Development — not production-ready.**
 
-The repository currently contains a validated Development PostgreSQL/PostGIS runtime, authenticated multi-user/device foundations, native device-authenticated sample ingestion, owner-scoped history/live reads, a Glaze UI 2.0 web experience, server-enforced tracking pause/resume, an owner-scoped **read-only Timeline surface**, an owner-scoped **Find My device-state surface**, and an owner-scoped **Find My recovery-capability gate**.
+The repository currently contains a validated Development PostgreSQL/PostGIS runtime, authenticated multi-user/device foundations, native device-authenticated sample ingestion, owner-scoped history/live reads, a Glaze UI 2.0 web experience, server-enforced tracking pause/resume, an owner-scoped **Timeline surface with bounded filtering, explicit deletion controls, and local CSV/GeoJSON export**, an owner-scoped **Find My device-state surface**, and an owner-scoped **Find My recovery-capability gate**.
 
 Source/CI validation does not establish production deployment, production identity, geographic map delivery, background tracking acceptance, recovery command authority, anti-stalking acceptance, release, or Stable qualification.
 
@@ -56,7 +56,11 @@ The Development web client can use an interim session-scoped user credential to 
 
 The Live experience supports authenticated identity, live/last-known device state, sample age, accuracy, optional battery information, stale/no-location states, manual refresh, periodic automatic refresh, and server-enforced tracking pause/resume.
 
-The read-only Timeline reuses the authenticated owner-scoped history API and renders at most 50 persisted samples per request. The Timeline device filter and Past hour / Past 24 hours / Past 7 days selections now issue bounded `device_id`, `from`, `to`, and `limit=50` history queries to the existing server contract rather than treating a previously loaded 50-row snapshot as complete history. The server remains authoritative for owner scope. A failed filter request preserves the previously rendered Timeline instead of presenting failure as an empty history. Timeline does not infer a route, visit, stay, trip, transport mode, geofence, or current connectivity state from historical samples.
+The Timeline reuses the authenticated owner-scoped history API and renders at most 50 persisted samples per request. Device and Past hour / Past 24 hours / Past 7 days selections issue bounded `device_id`, `from`, `to`, and `limit=50` history queries to the existing server contract rather than treating a previously loaded 50-row snapshot as complete history. The server remains authoritative for owner scope. A failed filter request preserves the previously rendered Timeline instead of presenting failure as an empty history.
+
+Timeline history deletion is an explicit control, not an inference from the visible 50 rows. A deletion request requires browser confirmation and calls the existing owner-scoped server deletion contract for one bounded batch of at most 500 matching samples. The server re-checks ownership, cutoff, and optional device scope. The browser never auto-repeats when more history may remain.
+
+The browser can also download the **currently loaded** bounded Timeline view as CSV or GeoJSON without making another history request. CSV applies spreadsheet-formula hardening to text cells. GeoJSON emits independent Point features with `[longitude, latitude]` coordinates and the current sample metadata. Neither format connects samples into a route or infers visits, stays, trips, transport modes, geofences, or movement.
 
 The browser never supplies an authoritative user ID; the server derives ownership from the authenticated credential.
 
@@ -86,9 +90,9 @@ Current source does **not** establish Lost Mode execution, remote erase, nearby 
 
 The first-party API is versioned under `/api/v1/`. Ownership comes from authenticated user/device credentials, never request-supplied user identifiers.
 
-Current Development endpoints include health/readiness, authenticated identity, owner-scoped device listing/enrollment/revocation, owner preferences/tracking pause, authenticated device identity, device-authenticated location ingestion, owner-scoped location history, owner-scoped live state, and owner-scoped Find My recovery capability state.
+Current Development endpoints include health/readiness, authenticated identity, owner-scoped device listing/enrollment/revocation, owner preferences/tracking pause, authenticated device identity, device-authenticated location ingestion, owner-scoped location history/deletion, owner-scoped live state, and owner-scoped Find My recovery capability state.
 
-The owner-scoped history endpoint accepts bounded device/time/range filters and limit constraints. Those filters narrow an already authenticated owner's history; they do not grant access to another user's samples.
+The owner-scoped history endpoint accepts bounded device/time/range filters and limit constraints. Those filters narrow an already authenticated owner's history; they do not grant access to another user's samples. Local export reuses only responses that have already passed this authenticated boundary.
 
 The ingestion path validates bounded sample data, derives ownership from the device credential, rejects user-session credentials for device ingestion, enforces idempotency, rechecks revocation, enforces tracking pause in the transaction, and stores location through the PostGIS ownership schema.
 
@@ -112,7 +116,7 @@ Still incomplete or separately gated:
 - Android background collection and representative-device acceptance;
 - encrypted offline queue/synchronization;
 - general sharing/public links;
-- Timeline retention/purge/export controls, route inference, trips, places, geofences, and insights;
+- complete-account export/import, broader retention-policy management, route inference, trips, places, geofences, and insights;
 - production Find My recovery commands and offline/nearby finding;
 - anti-stalking runtime acceptance;
 - full portability/backup/restore acceptance;
@@ -122,6 +126,9 @@ Still incomplete or separately gated:
 
 - [USER-MANUAL.md](USER-MANUAL.md)
 - [SPECIFICATIONS.md](SPECIFICATIONS.md)
+- [FEATURES.md](FEATURES.md)
+- [BENEFITS.md](BENEFITS.md)
+- [COMPETITIVE-OBJECTIVES.md](COMPETITIVE-OBJECTIVES.md)
 - [docs/development-runtime.md](docs/development-runtime.md)
 - [docs/authentication.md](docs/authentication.md)
 - [docs/tracking.md](docs/tracking.md)
