@@ -1,0 +1,19 @@
+.timeline-accuracy-presentation-control select {
+  min-width: 174px;
+}
+
+.timeline-list .timeline-item[hidden] {
+  display: none;
+}
+
+.timeline-history-actions button[aria-disabled="true"] {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+@media (max-width: 760px) {
+  .timeline-accuracy-presentation-control,
+  .timeline-accuracy-presentation-control select {
+    width: 100%;
+  }
+}
