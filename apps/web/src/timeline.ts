@@ -1,5 +1,11 @@
 import "./timeline.css";
 import { timelineHistoryGeoJSON } from "./timeline-geojson";
+import {
+  TIMELINE_ORDER_OPTIONS,
+  normalizeTimelinePresentationOrder,
+  timelineOrderedView,
+  timelineOrderStatus,
+} from "./timeline-order-control";
 import { summarizeTimelineView } from "./timeline-summary";
 
 export type TimelineDevice = {
@@ -155,10 +161,13 @@ function renderTimelineSummary(samples: TimelineSample[]): string {
 }
 
 export function renderTimelineSurface(devices: TimelineDevice[], samples: TimelineSample[]): string {
-  const boundedSamples = samples.slice(0, timelineLimit);
+  const boundedSamples = timelineOrderedView(samples, "newest", timelineLimit);
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
   const deviceOptions = devices
     .map((entry) => `<option value="${escapeHTML(entry.device.id)}">${escapeHTML(entry.device.display_name)}</option>`)
+    .join("");
+  const orderOptions = TIMELINE_ORDER_OPTIONS
+    .map((option) => `<option value="${option.value}">${escapeHTML(option.label)}</option>`)
     .join("");
 
   return `
@@ -169,7 +178,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
           <h2 id="timeline-title">Recent persisted history</h2>
           <p>Owner-scoped history from your authenticated Location account. This view does not infer routes, stops, visits, or movement between samples.</p>
         </div>
-        <div class="timeline-filters" aria-label="Timeline filters">
+        <div class="timeline-filters" aria-label="Timeline filters and presentation">
           <label class="timeline-filter" for="timeline-device-filter">
             <span>Device</span>
             <select id="timeline-device-filter">
@@ -186,12 +195,18 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
               <option value="7d">Past 7 days</option>
             </select>
           </label>
+          <label class="timeline-filter" for="timeline-order-filter">
+            <span>Order</span>
+            <select id="timeline-order-filter">
+              ${orderOptions}
+            </select>
+          </label>
         </div>
       </div>
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. The summary, coordinate-copy action, and CSV/GeoJSON exports operate only on the currently loaded bounded view and make no additional history request.</span>
+        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. Ordering, the summary, coordinate-copy action, and CSV/GeoJSON exports operate only on the currently loaded bounded view and make no additional history request.</span>
       </div>
 
       <div class="timeline-history-control" aria-labelledby="timeline-history-control-title">
@@ -218,7 +233,7 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
       <dl class="timeline-summary" id="timeline-summary" aria-label="Current Timeline view summary">
         ${renderTimelineSummary(boundedSamples)}
       </dl>
-      <p class="timeline-filter-status" id="timeline-filter-status" role="status">Showing ${boundedSamples.length} owner-scoped sample${boundedSamples.length === 1 ? "" : "s"}.</p>
+      <p class="timeline-filter-status" id="timeline-filter-status" role="status">${timelineOrderStatus("newest", boundedSamples.length)}</p>
       <ol class="timeline-list" id="timeline-list">
         ${renderTimelineItems(boundedSamples, deviceNames)}
       </ol>
@@ -270,6 +285,7 @@ export function bindTimelineSurface(
 ): void {
   const deviceFilter = document.querySelector<HTMLSelectElement>("#timeline-device-filter");
   const timeFilter = document.querySelector<HTMLSelectElement>("#timeline-time-filter");
+  const orderFilter = document.querySelector<HTMLSelectElement>("#timeline-order-filter");
   const deletionWindow = document.querySelector<HTMLSelectElement>("#timeline-delete-window");
   const deleteButton = document.querySelector<HTMLButtonElement>("#timeline-delete-history");
   const csvExportButton = document.querySelector<HTMLButtonElement>("#timeline-export-current");
@@ -277,11 +293,13 @@ export function bindTimelineSurface(
   const summary = document.querySelector<HTMLDListElement>("#timeline-summary");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
   const status = document.querySelector<HTMLElement>("#timeline-filter-status");
-  if (!deviceFilter || !timeFilter || !list || !status) return;
+  if (!deviceFilter || !timeFilter || !orderFilter || !list || !status) return;
 
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
   let requestGeneration = 0;
-  let currentSamples = initialSamples.slice(0, timelineLimit);
+  let currentOrder = normalizeTimelinePresentationOrder(orderFilter.value);
+  let currentServerSamples = initialSamples.slice(0, timelineLimit);
+  let currentSamples = timelineOrderedView(currentServerSamples, currentOrder, timelineLimit);
 
   const syncExportButtons = () => {
     const disabled = currentSamples.length === 0;
@@ -290,6 +308,12 @@ export function bindTimelineSurface(
   };
   const syncSummary = () => {
     if (summary) summary.innerHTML = renderTimelineSummary(currentSamples);
+  };
+  const renderCurrentPresentation = () => {
+    currentSamples = timelineOrderedView(currentServerSamples, currentOrder, timelineLimit);
+    list.innerHTML = renderTimelineItems(currentSamples, deviceNames);
+    syncSummary();
+    syncExportButtons();
   };
   syncExportButtons();
   syncSummary();
@@ -333,6 +357,12 @@ export function bindTimelineSurface(
     }
   });
 
+  orderFilter.addEventListener("change", () => {
+    currentOrder = normalizeTimelinePresentationOrder(orderFilter.value);
+    renderCurrentPresentation();
+    status.textContent = `${timelineOrderStatus(currentOrder, currentSamples.length)} Ordering changed locally; no additional history request was made.`;
+  });
+
   const applyFilters = async (): Promise<number | null> => {
     const generation = ++requestGeneration;
     const selectedDevice = deviceFilter.value;
@@ -348,12 +378,10 @@ export function bindTimelineSurface(
     try {
       const response = await loadHistory(path);
       if (generation !== requestGeneration) return null;
-      const samples = Array.isArray(response.locations) ? response.locations.slice(0, timelineLimit) : [];
-      currentSamples = samples;
-      list.innerHTML = renderTimelineItems(samples, deviceNames);
-      syncSummary();
-      status.textContent = `Showing ${samples.length} server-filtered sample${samples.length === 1 ? "" : "s"}.`;
-      return samples.length;
+      currentServerSamples = Array.isArray(response.locations) ? response.locations.slice(0, timelineLimit) : [];
+      renderCurrentPresentation();
+      status.textContent = `${timelineOrderStatus(currentOrder, currentSamples.length)} Server device/time filters were applied by the authenticated history API.`;
+      return currentSamples.length;
     } catch {
       if (generation !== requestGeneration) return null;
       status.textContent = "The authenticated history request failed. The previous Timeline view has been preserved.";
@@ -403,7 +431,7 @@ export function bindTimelineSurface(
       const result = await deleteHistory(path);
       const visibleCount = await applyFilters();
       if (visibleCount == null) return;
-      status.textContent = `Deleted ${result.deleted_count} sample${result.deleted_count === 1 ? "" : "s"}. ${result.more_may_remain ? "More matching history may remain; run another explicitly confirmed batch if desired. " : "No additional matching batch was indicated. "}Showing ${visibleCount} server-filtered sample${visibleCount === 1 ? "" : "s"}.`;
+      status.textContent = `Deleted ${result.deleted_count} sample${result.deleted_count === 1 ? "" : "s"}. ${result.more_may_remain ? "More matching history may remain; run another explicitly confirmed batch if desired. " : "No additional matching batch was indicated. "}${timelineOrderStatus(currentOrder, visibleCount)}`;
     } catch {
       status.textContent = "The authenticated history deletion request failed. No deletion success is being assumed.";
     } finally {
