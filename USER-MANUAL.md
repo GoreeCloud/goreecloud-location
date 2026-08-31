@@ -2,7 +2,7 @@
 
 ## Current availability
 
-GoreeCloud Location is in **Development** and is not production-ready. The current repository includes an authenticated Development web experience, native API/service foundations, a validated Development PostgreSQL/PostGIS runtime, device-authenticated location ingestion, owner-scoped live/history reads, tracking pause/resume, an owner-scoped read-only Timeline, an owner-scoped Find My device-state surface, and a server-authoritative Find My recovery-capability gate.
+GoreeCloud Location is in **Development** and is not production-ready. The current repository includes an authenticated Development web experience, native API/service foundations, a validated Development PostgreSQL/PostGIS runtime, device-authenticated location ingestion, owner-scoped live/history reads, tracking pause/resume, owner-scoped Timeline filtering/history controls/local exports, an owner-scoped Find My device-state surface, and a server-authoritative Find My recovery-capability gate.
 
 ## Sign in to a Development environment
 
@@ -36,7 +36,7 @@ A revoked device credential or server-side pause state must prevent new accepted
 
 ## Timeline and location history
 
-The Timeline is a read-only view of history owned by the authenticated user. It shows at most 50 samples for each request and can display capture time, coordinates, accuracy, source, and server-received time.
+The Timeline is an owner-scoped view of history for the authenticated user. It shows at most 50 samples for each request and can display capture time, coordinates, accuracy, source, and server-received time.
 
 The current filters are:
 
@@ -51,6 +51,30 @@ Selecting a device or time window sends bounded filters to the authenticated Loc
 Timeline samples are discrete history records. The current interface does **not** infer routes, visits, stops, trips, transport modes, geofences, or current network connectivity from those records.
 
 History remains private to the authenticated owner unless and until an explicit sharing feature is implemented and accepted. Current source does not establish public links or general user-to-user sharing.
+
+### Delete older history
+
+The **History control** section can request deletion of samples older than a selected cutoff for all enrolled devices or the currently selected device.
+
+- Every deletion batch requires an explicit browser confirmation.
+- One request deletes at most the server-authorized bounded batch of 500 matching samples.
+- The browser does not automatically repeat the deletion when more history may remain.
+- The server re-checks authenticated ownership, device scope, and cutoff; the browser is not deletion authority.
+- After a successful batch, the Timeline is refreshed through the normal authenticated history read.
+
+If more matching history may remain, the interface says so and requires another separately confirmed batch.
+
+### Export the current bounded view
+
+The Timeline can export the samples already loaded in the browser without issuing another history request.
+
+**CSV** exports the current ≤50-sample view with capture/server times, device identifiers/names, coordinates, optional accuracy, and source. Text cells are hardened against common spreadsheet-formula prefixes before download.
+
+**GeoJSON** exports the same current samples as a `FeatureCollection` of independent `Point` features. Coordinates are `[longitude, latitude]`; properties include the device, capture/server times, optional accuracy, and source.
+
+GeoJSON export intentionally does **not** connect points into a route, infer movement, invent visits/stops/trips, or request additional samples. Both export formats are local browser downloads of data that is already present in the current authenticated Timeline view.
+
+These Development exports are portability aids for the bounded view, not a complete account-history export or a claim of finished Everkeep export/backup integration.
 
 ## Find My device state
 
@@ -93,6 +117,6 @@ Location data is highly sensitive.
 
 ## Current limitations
 
-The Development source does not establish production GoreeCloud Identity integration, production mapping/geocoding/routing, Android background collection acceptance, offline synchronization, sharing, places/trips/geofences, Timeline retention/purge/export controls, production Find My recovery commands, offline finding, anti-stalking acceptance, production deployment, signed release, or Stable qualification.
+The Development source does not establish production GoreeCloud Identity integration, production mapping/geocoding/routing, Android background collection acceptance, offline synchronization, sharing, places/trips/geofences, complete-account export/import or retention-policy management, production Find My recovery commands, offline finding, anti-stalking acceptance, production deployment, signed release, or Stable qualification.
 
 Refer to `README.md`, `SPECIFICATIONS.md`, and the `docs/` directory for detailed architecture and acceptance boundaries.
