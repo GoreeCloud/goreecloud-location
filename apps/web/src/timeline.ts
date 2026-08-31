@@ -71,6 +71,39 @@ function formatCoordinates(sample: TimelineSample): string {
   return `${sample.latitude.toFixed(5)}, ${sample.longitude.toFixed(5)}`;
 }
 
+function csvCell(value: string | number | undefined, protectSpreadsheetFormula = false): string {
+  let text = value == null ? "" : String(value);
+  if (protectSpreadsheetFormula && /^[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+export function timelineHistoryCSV(
+  samples: TimelineSample[],
+  deviceNames: ReadonlyMap<string, string> = new Map(),
+): string {
+  const header = [
+    "captured_at",
+    "server_received_at",
+    "device_id",
+    "device_name",
+    "latitude",
+    "longitude",
+    "accuracy_m",
+    "source",
+  ].join(",");
+  const rows = samples.slice(0, timelineLimit).map((sample) => [
+    csvCell(sample.captured_at, true),
+    csvCell(sample.server_received_at, true),
+    csvCell(sample.device_id, true),
+    csvCell(deviceNames.get(sample.device_id) ?? "Enrolled device", true),
+    csvCell(sample.latitude),
+    csvCell(sample.longitude),
+    csvCell(sample.accuracy_m),
+    csvCell(sample.source, true),
+  ].join(","));
+  return [header, ...rows].join("\r\n");
+}
+
 export function timelineSampleMatchesWindow(capturedAt: string, window: TimelineWindow, now = Date.now()): boolean {
   const windowMs = timelineWindows[window];
   if (windowMs == null) return true;
@@ -140,13 +173,13 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
 
       <div class="timeline-privacy-note" role="note">
         <strong>Privacy boundary</strong>
-        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned.</span>
+        <span>Timeline requests are owner-scoped by the authenticated server. Device and time selections are sent only as bounded history filters; at most ${timelineLimit} samples are returned. Export uses only the currently loaded bounded view and makes no additional history request.</span>
       </div>
 
       <div class="timeline-history-control" aria-labelledby="timeline-history-control-title">
         <div>
           <strong id="timeline-history-control-title">History control</strong>
-          <span>Delete one server-bounded batch of up to 500 samples. The server re-checks account ownership and the optional device scope.</span>
+          <span>Export the current view locally, or delete one server-bounded batch of up to 500 samples. The server re-checks account ownership and the optional device scope for deletion.</span>
         </div>
         <label class="timeline-filter" for="timeline-delete-window">
           <span>Delete samples older than</span>
@@ -157,7 +190,10 @@ export function renderTimelineSurface(devices: TimelineDevice[], samples: Timeli
             <option value="now">Now (all older history)</option>
           </select>
         </label>
-        <button id="timeline-delete-history" class="timeline-delete-button" type="button">Delete one bounded batch</button>
+        <div class="timeline-history-actions">
+          <button id="timeline-export-current" class="timeline-export-button" type="button">Export current view (CSV)</button>
+          <button id="timeline-delete-history" class="timeline-delete-button" type="button">Delete one bounded batch</button>
+        </div>
       </div>
 
       <p class="timeline-filter-status" id="timeline-filter-status" role="status">Showing ${boundedSamples.length} owner-scoped sample${boundedSamples.length === 1 ? "" : "s"}.</p>
@@ -204,17 +240,40 @@ export function bindTimelineSurface(
   devices: TimelineDevice[],
   loadHistory: TimelineHistoryLoader,
   deleteHistory?: TimelineHistoryDeleter,
+  initialSamples: TimelineSample[] = [],
 ): void {
   const deviceFilter = document.querySelector<HTMLSelectElement>("#timeline-device-filter");
   const timeFilter = document.querySelector<HTMLSelectElement>("#timeline-time-filter");
   const deletionWindow = document.querySelector<HTMLSelectElement>("#timeline-delete-window");
   const deleteButton = document.querySelector<HTMLButtonElement>("#timeline-delete-history");
+  const exportButton = document.querySelector<HTMLButtonElement>("#timeline-export-current");
   const list = document.querySelector<HTMLOListElement>("#timeline-list");
   const status = document.querySelector<HTMLElement>("#timeline-filter-status");
   if (!deviceFilter || !timeFilter || !list || !status) return;
 
   const deviceNames = new Map(devices.map((entry) => [entry.device.id, entry.device.display_name]));
   let requestGeneration = 0;
+  let currentSamples = initialSamples.slice(0, timelineLimit);
+
+  const syncExportButton = () => {
+    if (exportButton) exportButton.disabled = currentSamples.length === 0;
+  };
+  syncExportButton();
+
+  exportButton?.addEventListener("click", () => {
+    if (currentSamples.length === 0) return;
+    const csv = `\uFEFF${timelineHistoryCSV(currentSamples, deviceNames)}`;
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `goreecloud-location-timeline-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.hidden = true;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    status.textContent = `Exported ${currentSamples.length} currently loaded sample${currentSamples.length === 1 ? "" : "s"} locally. No additional history request was made.`;
+  });
 
   const applyFilters = async (): Promise<number | null> => {
     const generation = ++requestGeneration;
@@ -225,11 +284,13 @@ export function bindTimelineSurface(
     deviceFilter.disabled = true;
     timeFilter.disabled = true;
     if (deleteButton) deleteButton.disabled = true;
+    if (exportButton) exportButton.disabled = true;
     status.textContent = "Loading owner-scoped history from the authenticated server…";
     try {
       const response = await loadHistory(path);
       if (generation !== requestGeneration) return null;
       const samples = Array.isArray(response.locations) ? response.locations.slice(0, timelineLimit) : [];
+      currentSamples = samples;
       list.innerHTML = renderTimelineItems(samples, deviceNames);
       status.textContent = `Showing ${samples.length} server-filtered sample${samples.length === 1 ? "" : "s"}.`;
       return samples.length;
@@ -242,6 +303,7 @@ export function bindTimelineSurface(
         deviceFilter.disabled = false;
         timeFilter.disabled = false;
         if (deleteButton) deleteButton.disabled = deleteHistory == null;
+        syncExportButton();
       }
     }
   };
@@ -274,6 +336,7 @@ export function bindTimelineSurface(
     deletionWindow.disabled = true;
     deviceFilter.disabled = true;
     timeFilter.disabled = true;
+    if (exportButton) exportButton.disabled = true;
     status.textContent = "Deleting one bounded owner-scoped history batch…";
     try {
       const result = await deleteHistory(path);
@@ -287,6 +350,7 @@ export function bindTimelineSurface(
       deviceFilter.disabled = false;
       timeFilter.disabled = false;
       deleteButton.disabled = false;
+      syncExportButton();
     }
   });
 }
