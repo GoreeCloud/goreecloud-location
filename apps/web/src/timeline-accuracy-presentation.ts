@@ -11,6 +11,10 @@ import {
   timelineFilteredSummaryStatus,
   type TimelineFilteredSummary,
 } from "./timeline-filtered-summary";
+import {
+  timelineFilterScope,
+  timelineFilterScopeStatus,
+} from "./timeline-filter-scope";
 
 type AccuracyRow = {
   element: HTMLLIElement;
@@ -103,10 +107,10 @@ function bindTimelineAccuracyPresentation(): void {
     const visibleElements = new Set(visibleRows.map((row) => row.element));
     for (const row of rows) row.element.hidden = !visibleElements.has(row.element);
 
-    const filtered = currentThreshold !== "all";
-    summary.hidden = filtered;
-    filteredSummary.hidden = !filtered;
-    if (filtered) {
+    const scope = timelineFilterScope(items.length, visibleRows.length, currentThreshold);
+    summary.hidden = scope.filtered;
+    filteredSummary.hidden = !scope.filtered;
+    if (scope.filtered) {
       const visibleSummary = summarizeTimelineFilteredView(visibleRows);
       filteredSummary.innerHTML = renderFilteredSummary(visibleSummary);
       filteredSummary.setAttribute("aria-description", timelineFilteredSummaryStatus(visibleSummary));
@@ -115,21 +119,22 @@ function bindTimelineAccuracyPresentation(): void {
       filteredSummary.removeAttribute("aria-description");
     }
 
-    csvExport.setAttribute("aria-disabled", String(filtered));
-    geoJSONExport.setAttribute("aria-disabled", String(filtered));
-    const exportTitle = filtered
-      ? "Select All reported accuracy before exporting the full loaded Timeline view."
-      : "";
+    csvExport.setAttribute("aria-disabled", String(!scope.fullLoadedViewExportsAvailable));
+    geoJSONExport.setAttribute("aria-disabled", String(!scope.fullLoadedViewExportsAvailable));
+    const exportTitle = scope.fullLoadedViewExportsAvailable
+      ? ""
+      : "Select All reported accuracy before exporting the full loaded Timeline view.";
     csvExport.title = exportTitle;
     geoJSONExport.title = exportTitle;
 
     const baseStatus = timelineAccuracyStatus(currentThreshold, visibleRows.length);
-    const summaryStatus = filtered
+    const scopeStatus = timelineFilterScopeStatus(scope);
+    const summaryStatus = scope.filtered
       ? ` ${timelineFilteredSummaryStatus(summarizeTimelineFilteredView(visibleRows))}`
       : "";
-    status.textContent = filtered
-      ? `${baseStatus}${summaryStatus} ${items.length - visibleRows.length} loaded sample${items.length - visibleRows.length === 1 ? " is" : "s are"} hidden from the list. Local exports are paused while this presentation filter is active. No additional history request was made.`
-      : `${baseStatus} Accuracy presentation is local and makes no additional history request.`;
+    status.textContent = scope.filtered
+      ? `${baseStatus}${summaryStatus} ${scopeStatus} Local exports are paused while this presentation filter is active. No additional history request was made.`
+      : `${baseStatus} ${scopeStatus} Accuracy presentation is local and makes no additional history request.`;
   };
 
   const blockFilteredExport = (event: Event) => {
