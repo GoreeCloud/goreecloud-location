@@ -87,6 +87,18 @@ function bindTimelineAccuracyPresentation(): void {
     filters.append(control);
   }
 
+  let reset = timeline.querySelector<HTMLButtonElement>("#timeline-accuracy-presentation-reset");
+  if (!reset) {
+    reset = document.createElement("button");
+    reset.type = "button";
+    reset.id = "timeline-accuracy-presentation-reset";
+    reset.className = "timeline-accuracy-presentation-reset";
+    reset.textContent = "Clear accuracy filter";
+    reset.setAttribute("aria-controls", "timeline-list");
+    reset.hidden = currentThreshold === "all";
+    filters.append(reset);
+  }
+
   let filteredSummary = timeline.querySelector<HTMLDListElement>("#timeline-filtered-summary");
   if (!filteredSummary) {
     filteredSummary = document.createElement("dl");
@@ -110,6 +122,8 @@ function bindTimelineAccuracyPresentation(): void {
     const scope = timelineFilterScope(items.length, visibleRows.length, currentThreshold);
     summary.hidden = scope.filtered;
     filteredSummary.hidden = !scope.filtered;
+    reset.hidden = !scope.filtered;
+    reset.setAttribute("aria-disabled", String(!scope.filtered));
     if (scope.filtered) {
       const visibleSummary = summarizeTimelineFilteredView(visibleRows);
       filteredSummary.innerHTML = renderFilteredSummary(visibleSummary);
@@ -152,6 +166,16 @@ function bindTimelineAccuracyPresentation(): void {
     });
     csvExport.addEventListener("click", blockFilteredExport, { capture: true });
     geoJSONExport.addEventListener("click", blockFilteredExport, { capture: true });
+  }
+
+  if (!reset.dataset.timelineAccuracyBound) {
+    reset.dataset.timelineAccuracyBound = "true";
+    reset.addEventListener("click", () => {
+      currentThreshold = "all";
+      select.value = "all";
+      applyPresentation();
+      select.focus();
+    });
   }
 
   if (!activeListObserver) {
