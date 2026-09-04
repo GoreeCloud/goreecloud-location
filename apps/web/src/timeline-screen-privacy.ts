@@ -22,12 +22,14 @@ function syncExportAvailability(timeline: HTMLElement): void {
   const busy = filtersAreBusy(timeline);
   timeline.querySelectorAll<HTMLButtonElement>('#timeline-export-current, #timeline-export-geojson').forEach((button) => {
     const presentationFiltered = button.getAttribute('aria-disabled') === 'true';
-    button.disabled = privacyEnabled || !hasSamples || busy || presentationFiltered;
-    button.title = privacyEnabled
+    const shouldDisable = privacyEnabled || !hasSamples || busy || presentationFiltered;
+    if (button.disabled !== shouldDisable) button.disabled = shouldDisable;
+    const title = privacyEnabled
       ? 'Screen privacy is hiding precise coordinates. Show precise coordinates before exporting coordinate-bearing data.'
       : presentationFiltered
         ? 'Select All reported accuracy before exporting the full loaded Timeline view.'
         : '';
+    if (button.title !== title) button.title = title;
   });
 }
 
@@ -36,24 +38,26 @@ function applyCoordinatePresentation(timeline: HTMLElement): void {
 
   timeline.querySelectorAll<HTMLElement>('.timeline-coordinates').forEach((coordinates) => {
     if (!coordinateText.has(coordinates)) coordinateText.set(coordinates, coordinates.textContent ?? '');
-    if (privacyEnabled) coordinates.textContent = 'Precise coordinates hidden';
-    else coordinates.textContent = coordinateText.get(coordinates) ?? coordinates.textContent ?? '';
+    const desired = privacyEnabled
+      ? 'Precise coordinates hidden'
+      : coordinateText.get(coordinates) ?? coordinates.textContent ?? '';
+    if (coordinates.textContent !== desired) coordinates.textContent = desired;
   });
 
   timeline.querySelectorAll<HTMLButtonElement>('.timeline-copy-coordinates').forEach((button) => {
     const renderedCoordinates = button.dataset.timelineCopyCoordinate;
     if (renderedCoordinates && !copyCoordinates.has(button)) copyCoordinates.set(button, renderedCoordinates);
     if (privacyEnabled) {
-      delete button.dataset.timelineCopyCoordinate;
-      button.disabled = true;
-      button.title = 'Screen privacy is hiding precise coordinates.';
-      button.setAttribute('aria-disabled', 'true');
+      if (button.dataset.timelineCopyCoordinate) delete button.dataset.timelineCopyCoordinate;
+      if (!button.disabled) button.disabled = true;
+      if (button.title !== 'Screen privacy is hiding precise coordinates.') button.title = 'Screen privacy is hiding precise coordinates.';
+      if (button.getAttribute('aria-disabled') !== 'true') button.setAttribute('aria-disabled', 'true');
     } else {
       const original = copyCoordinates.get(button);
-      if (original) button.dataset.timelineCopyCoordinate = original;
-      button.disabled = false;
-      button.title = '';
-      button.removeAttribute('aria-disabled');
+      if (original && button.dataset.timelineCopyCoordinate !== original) button.dataset.timelineCopyCoordinate = original;
+      if (button.disabled) button.disabled = false;
+      if (button.title) button.title = '';
+      if (button.hasAttribute('aria-disabled')) button.removeAttribute('aria-disabled');
     }
   });
 
@@ -62,6 +66,13 @@ function applyCoordinatePresentation(timeline: HTMLElement): void {
 
 function screenPrivacyStatus(timeline: HTMLElement): HTMLElement | null {
   return timeline.querySelector<HTMLElement>('#timeline-filter-status');
+}
+
+function syncPrivacyControl(control: HTMLButtonElement): void {
+  const checked = String(privacyEnabled);
+  if (control.getAttribute('aria-checked') !== checked) control.setAttribute('aria-checked', checked);
+  const label = privacyEnabled ? 'Show precise coordinates' : 'Hide precise coordinates';
+  if (control.textContent !== label) control.textContent = label;
 }
 
 function ensurePrivacyControl(timeline: HTMLElement): void {
@@ -80,8 +91,7 @@ function ensurePrivacyControl(timeline: HTMLElement): void {
 
     control.addEventListener('click', () => {
       privacyEnabled = !privacyEnabled;
-      control?.setAttribute('aria-checked', String(privacyEnabled));
-      control!.textContent = privacyEnabled ? 'Show precise coordinates' : 'Hide precise coordinates';
+      syncPrivacyControl(control!);
       applyCoordinatePresentation(timeline);
       const status = screenPrivacyStatus(timeline);
       if (status) {
@@ -92,8 +102,7 @@ function ensurePrivacyControl(timeline: HTMLElement): void {
     });
   }
 
-  control.setAttribute('aria-checked', String(privacyEnabled));
-  control.textContent = privacyEnabled ? 'Show precise coordinates' : 'Hide precise coordinates';
+  syncPrivacyControl(control);
 }
 
 function bindTimelineScreenPrivacy(): void {
