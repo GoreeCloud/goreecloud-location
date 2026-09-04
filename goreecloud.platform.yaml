@@ -1,0 +1,137 @@
+schema_version: "0.2"
+
+component:
+  type: application
+  id: location
+  product_name: GoreeCloud Location
+  repository: GoreeCloud/goreecloud-location
+
+lifecycle: development
+version: 0.0.0
+
+supported_platforms:
+  - web
+  - android
+
+api:
+  versions:
+    - v1
+  endpoints:
+    - name: location-api
+      url: /api/v1
+      purpose: Authenticated Location API for device enrollment, location ingestion, owner-scoped live/history access, preferences, deletion, and bounded Find My capability state.
+
+platform_systems:
+  manager:
+    result: applicable-blocked
+    version: null
+    evidence: []
+    notes: Manager operational visibility and acceptance are not implemented or accepted for Location.
+  privacy_shield:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+    notes: Privacy-first ownership, pause, deletion, and bounded history controls exist in source, but accepted Privacy Shield runtime integration, retention policy, sharing, background-location, and production privacy evidence remain incomplete.
+  wardveil_security:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+    notes: Authentication boundaries and security controls exist in source, but Wardveil Security runtime integration, recovery-security, anti-abuse, and production acceptance remain incomplete.
+  everkeep:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+    notes: Export and recovery requirements are documented, but Everkeep backup, restore, and recovery acceptance remain incomplete.
+  glaze_ui:
+    result: applicable-migration-required
+    version: "2.0.0"
+    evidence:
+      - README.md
+      - apps/web/src/timeline.css
+      - apps/web/src/timeline-accuracy-presentation.css
+    notes: Current repository source still labels the superseded 2.0.0 target. It must be reconciled to the authoritative GLAZE UI V1.1 / 1.1.0 consumer baseline and complete application-specific acceptance.
+  mesh:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+    notes: Cross-service coordination requirements are documented, but accepted Mesh registration, runtime coordination, and evidence delivery are not implemented.
+    capabilities: []
+    dependencies:
+      - goreecloud-identity
+      - privacy-shield
+      - wardveil-security
+      - everkeep
+    published_events: []
+    consumed_events: []
+  identity:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - services/api/internal/identity
+    notes: Development user/device credentials enforce owner and device boundaries, but production GoreeCloud Identity user, device, session, and recovery integration and acceptance remain incomplete.
+
+health:
+  health_endpoint: /healthz
+  readiness_endpoint: /readyz
+
+continuity:
+  backup:
+    required: true
+    requirements:
+      - Back up owner-controlled location samples, device state, preferences, sharing state when implemented, and required service metadata through an accepted Everkeep scope with privacy-preserving handling.
+  restore:
+    required: true
+    requirements:
+      - Validate restoration of Location data and ownership boundaries into a clean environment before Stable acceptance.
+  export:
+    required: true
+    requirements:
+      - Preserve owner-controlled export of bounded history and provide complete documented account/location export before Stable acceptance.
+  portability:
+    required: true
+    requirements:
+      - Preserve documented portable location-data formats and migration behavior without weakening Privacy Shield retention or deletion requirements.
+
+external_dependencies:
+  - name: PostgreSQL with PostGIS
+    purpose: Durable multi-user spatial storage for owner-scoped Location state and history.
+    required: true
+    version_constraint: ">=16"
+
+compatibility:
+  platform_contract: "0.2"
+  glaze_ui_required: "1.1.0"
+  requires:
+    - goreecloud-platform-contract==0.2
+    - glaze-ui==1.1.0
+  provides:
+    - location-api-v1
+
+evidence:
+  acceptance_tests: []
+  release: []
+
+conformance:
+  status: nonconformant
+  validated_at: null
+  evidence: []
+  blockers:
+    - GLAZE UI V1.1 / 1.1.0 source reconciliation and application-specific rendered, accessibility, responsive, and form-factor acceptance remain incomplete.
+    - GoreeCloud Manager integration and acceptance remain incomplete.
+    - Privacy Shield runtime integration, retention, sharing, background-location, and production privacy acceptance remain incomplete.
+    - Wardveil Security runtime integration, recovery-security, anti-abuse, and production acceptance remain incomplete.
+    - Everkeep backup, restore, and recovery integration and acceptance remain incomplete.
+    - GoreeCloud Mesh registration, runtime coordination, and acceptance remain incomplete.
+    - GoreeCloud Identity production user/device/session integration and acceptance remain incomplete.
+    - Android background collection, representative-device validation, and production geographic-map delivery remain incomplete.
+    - Find My recovery authority, anti-stalking runtime acceptance, and production recovery evidence remain incomplete.
+    - Required Stable acceptance-test, release, rollback, deployment, and production evidence has not been produced.
