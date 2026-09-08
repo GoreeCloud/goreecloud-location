@@ -1,0 +1,169 @@
+schema_version: '0.2'
+
+component:
+  type: application
+  id: goreecloud-location
+  product_name: GoreeCloud Location
+  repository: GoreeCloud/goreecloud-location
+
+lifecycle: development
+version: unreleased-development
+
+supported_platforms:
+  - web
+  - android
+  - linux
+
+api:
+  versions:
+    - v1
+  endpoints:
+    - name: process-health
+      url: /healthz
+      purpose: Development HTTP process health without private location or dependency details.
+    - name: service-readiness
+      url: /readyz
+      purpose: Development readiness backed by authenticated PostgreSQL connectivity and required schema migration state.
+    - name: devices
+      url: /api/v1/devices
+      purpose: Authenticated owner-scoped device listing/enrollment; device deletion uses the owner-scoped resource form under this collection.
+    - name: locations
+      url: /api/v1/locations
+      purpose: Device-authenticated location ingestion and authenticated owner-scoped bounded history reads.
+    - name: live
+      url: /api/v1/live
+      purpose: Authenticated owner-scoped device live/last-known location state.
+    - name: find-my-recovery-capabilities
+      url: /api/v1/find-my/recovery-capabilities
+      purpose: Authenticated owner-scoped Find My recovery-capability state; current recovery commands remain denied/unimplemented.
+
+platform_systems:
+  manager:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - docs/development-runtime.md
+    notes: Location exposes Development health/readiness interfaces, but accepted GoreeCloud Manager registration, operational-state publication, alerting, and production observability integration are incomplete.
+  privacy_shield:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - docs/privacy.md
+    notes: Precise location is private by default and current source enforces owner-scoped boundaries and explicit deletion/export behavior, but producer-authoritative Privacy Shield runtime decisions, retention/sharing controls, disclosure policy, and production privacy acceptance are incomplete.
+  wardveil_security:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - docs/security.md
+    notes: Current source implements authentication, owner/device isolation, revocation, secret/logging boundaries, and fail-closed recovery-capability state, but accepted Wardveil runtime trust/security evidence, anti-abuse, Find My anti-stalking, production threat controls, and security acceptance are incomplete.
+  everkeep:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - USER-MANUAL.md
+    notes: Timeline supports bounded local CSV/GeoJSON export, but complete-account export/import, encrypted backup, clean-environment restore, recovery validation, migration, succession, and production Everkeep acceptance are incomplete.
+  glaze_ui:
+    result: applicable-migration-required
+    version: '2.0.0'
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+    notes: Authoritative Location main records Glaze UI 2.0 source targeting. Current published Stable consumer authority is V1.1 / 1.1.0, so migration is required. Stacked Draft PR #41 contains a Development V1.1 web reconciliation but is unmerged; the published 1.1.0 source also has the known immutable import-closure defect pending a corrected consumer-eligible Stable release and explicit Location revalidation.
+  mesh:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+    notes: GoreeCloud Mesh is the required coordination layer for approved cross-service interactions, but no accepted Location Mesh registration, dependency/event contract, transport, or production runtime evidence exists.
+    capabilities: []
+    dependencies: []
+    published_events: []
+    consumed_events: []
+  identity:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - docs/authentication.md
+    notes: Development user/device bearer-token boundaries are implemented and ownership is server-derived, but production GoreeCloud Identity user/device/account/session integration, credential lifecycle, revocation/rotation, and acceptance are incomplete.
+
+health:
+  health_endpoint: /healthz
+  readiness_endpoint: /readyz
+
+continuity:
+  backup:
+    required: true
+    requirements:
+      - Protect owner-scoped location history, device enrollment/preferences, and other approved durable Location state through an accepted encrypted Everkeep backup contract.
+      - Preserve privacy, deletion, retention, and device-revocation semantics in backup scope and exclude credentials/secrets from ordinary backup payloads.
+  restore:
+    required: true
+    requirements:
+      - Validate clean-environment restoration of approved Location state, ownership relations, PostGIS data, device/preference state, and required schema before Stable qualification.
+      - Verify restore does not resurrect deleted/expired state contrary to Privacy Shield policy and does not restore reusable credentials without an explicitly accepted protected-secret contract.
+  export:
+    required: true
+    requirements:
+      - Preserve documented user-controlled portable export for owner-authorized Location data in open formats while maintaining spreadsheet/formula hardening and location-data minimization.
+      - Expand beyond the currently loaded bounded Timeline export only through separately accepted complete-account export semantics.
+  portability:
+    required: true
+    requirements:
+      - Maintain documented migration/import paths for approved Location data without making a transitional service or third-party data model the permanent source of truth.
+      - Preserve source ownership, timestamp, coordinate precision, and deletion/retention semantics through migrations.
+
+external_dependencies:
+  - name: postgresql-postgis
+    purpose: Durable owner-scoped location persistence and geospatial operations for the Development service runtime.
+    required: true
+    version_constraint: PostgreSQL 17 / PostGIS 3.5 development baseline
+  - name: maplibre-compatible-geographic-provider
+    purpose: Replaceable map/geographic rendering provider for future accepted map delivery; production geographic delivery is not yet accepted.
+    required: false
+    version_constraint: null
+
+compatibility:
+  platform_contract: '0.2'
+  glaze_ui_required: '1.1.0'
+  requires:
+    - goreecloud-platform-contract==0.2
+    - glaze-ui==1.1.0
+  provides:
+    - location-api-v1
+    - owner-scoped-location-history
+    - device-location-ingestion
+    - find-my-capability-state
+
+evidence:
+  acceptance_tests: []
+  release: []
+
+conformance:
+  status: nonconformant
+  validated_at: null
+  evidence:
+    - README.md
+    - SPECIFICATIONS.md
+    - docs/development-runtime.md
+    - docs/authentication.md
+    - docs/tracking.md
+    - docs/security.md
+    - docs/privacy.md
+  blockers:
+    - GoreeCloud Manager registration, operational-state publication, alerting, and production observability acceptance are incomplete.
+    - Producer-authoritative Privacy Shield runtime integration, retention/sharing/disclosure controls, and production privacy acceptance are incomplete.
+    - Wardveil Security runtime trust/evidence integration, anti-abuse, Find My anti-stalking, and production security acceptance are incomplete.
+    - Everkeep encrypted backup, clean-environment restore, complete export/import, migration, rollback, and recovery acceptance are incomplete.
+    - Authoritative Location main still targets superseded Glaze UI 2.0.0; current published Stable V1.1 / 1.1.0 migration and downstream acceptance remain incomplete, and the known immutable 1.1.0 import-closure defect still requires a corrected consumer-eligible Stable release before current conformance can be claimed.
+    - GoreeCloud Mesh registration, dependency/event contracts, authenticated transport, and runtime acceptance are incomplete.
+    - Production GoreeCloud Identity user/device/account/session integration, credential lifecycle, and acceptance are incomplete.
+    - Production geographic map/geocoding/routing provider delivery and acceptance are incomplete.
+    - Android background collection, encrypted offline synchronization, representative-device acceptance, accessibility, sharing/geofencing/trips/places, and production Find My recovery/anti-stalking acceptance are incomplete.
+    - Production deployment, recovery/rollback, release provenance, signing, and Stable qualification are incomplete.
+    - No Stable or production-approved GoreeCloud Location release evidence is declared.
