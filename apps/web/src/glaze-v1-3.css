@@ -1,8 +1,18 @@
 /*
- * GoreeCloud Location — repository-local GLAZE UI V1.1 source mapping.
- * Target: 1.1.0 / v1.1.0
- * Stable source: 15cc76d2bcd4065552dc31c77145b63f34d9e7b2
- * Approved visual source: 8ea1f789bbabf943c3359514dc1506b24fa3c51b
+ * GoreeCloud Location — repository-local GLAZE UI V1.3 source mapping.
+ * Target: GLAZE UI V1.3 / 1.3.0 — Adaptive Resonance
+ * Stable source integration anchor: fc7cc91d2eace8da2371371c2855c24cbcb326a1
+ * Stable web entrypoint: css/glaze-v1.3.0.css
+ * Stable runtime entrypoint: js/glaze-v1.3.0.mjs
+ * Rollback baseline: 1.2.0
+ *
+ * V1.3 inherits the verified V1.2 rendering foundation and adds adaptive
+ * contracts. This Location-owned mapping preserves the compatible neutral /
+ * frosted material foundation, bounded accent, expressive shape hierarchy,
+ * human-reachability target floor, and accessibility-resilience fallbacks
+ * required by the current Stable line. It is source mapping only; rendered,
+ * assistive-technology, representative-device, performance, and production
+ * acceptance remain independently gated.
  *
  * Presentation only: this layer does not change Location collection, history,
  * sharing, Find My, authorization, privacy, security, or retention authority.
@@ -44,7 +54,7 @@ body {
   isolation: isolate;
 }
 
-/* V1.1 permits two bounded atmosphere fields: teal dominant, amber secondary. */
+/* Bounded product atmosphere: teal identity, amber secondary counter-light. */
 body::before {
   position: fixed;
   z-index: -1;
