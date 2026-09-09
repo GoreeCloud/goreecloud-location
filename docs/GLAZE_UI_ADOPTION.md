@@ -1,41 +1,47 @@
-# GoreeCloud Location — GLAZE UI V1.1 Adoption
+# GoreeCloud Location — GLAZE UI V1.3 Adoption
 
 ## Status
 
-Development source migration only. This record does not establish downstream conformance, Stable qualification, deployment, or production approval.
+Development source migration only. This record does not establish downstream conformance, Stable Location qualification, deployment, or production approval.
 
 ## Current authority
 
-- Target: **GLAZE UI V1.1 (`1.1.0`)**
-- Stable tag: `v1.1.0`
-- Stable release revision: `15cc76d2bcd4065552dc31c77145b63f34d9e7b2`
-- Approved visual source: `8ea1f789bbabf943c3359514dc1506b24fa3c51b`
-- Optical contract: `contracts/v1.1/optical-refinement.json`
-- Atmosphere tokens: `tokens/glaze-v1.1-atmosphere.json`
+- Target: **GLAZE UI V1.3 — Adaptive Resonance (`1.3.0`)**
+- Lifecycle authority: `registry/lifecycle.json`
+- Current Stable / Official: `1.3.0`
+- Stable source integration anchor: `fc7cc91d2eace8da2371371c2855c24cbcb326a1`
+- Stable web entrypoint: `css/glaze-v1.3.0.css`
+- Stable runtime entrypoint: `js/glaze-v1.3.0.mjs`
+- Migration authority: `MIGRATION_V1_2_TO_V1_3.md`
+- Rollback baseline: `1.2.0`
+- Planned next hardening line: `1.3.1-candidate`
 
-## Known Stable-line blocker
+The `.candidate` suffix on inherited V1.3 implementation-source filenames in the Glaze repository records source-stage provenance; it does not change the Stable lifecycle of the `1.3.0` aggregate entrypoints.
 
-The published `1.1.0` source remains the current Stable consumer target, but it has a known V1.1 CSS import-closure defect. The governed corrective line is GLAZE UI PR #129 / `1.1.1-rc.1`; that correction is still a Release Candidate with `consumerEligible: false` and is not a corrected immutable Stable release.
+## Historical source boundary
 
-Location may retain this bounded Development source mapping for review, but this `1.1.0` pin must not be used to claim current GLAZE UI conformance, release eligibility, deployment acceptance, or production approval. After a corrected immutable Stable release is published, Location must explicitly re-pin the exact version and revision and repeat all applicable source, rendered-web, accessibility, representative-browser/device, deployment, and production acceptance.
+Location previously carried Development source markers and migration work for pre-reset Glaze lines, including `2.0.0` and a later V1.1 reconciliation branch. Those records remain historical exact-revision evidence. They are not current consumer authority and must not be reinterpreted as V1.3 acceptance.
+
+The active V1.3 mapping removes stale 2.x activation and the V1.1 active entrypoint from the current Location web source path. CI fails closed unless the exact `1.3.0` marker, current local V1.3 entrypoint, exact Stable source integration anchor, and official Stable web/runtime entrypoint identifiers are present.
 
 ## Web mapping
 
-The Location web shell keeps durable reading and critical-decision content on solid/raised surfaces and confines translucent Glaze treatment to bounded application chrome and transient interaction surfaces.
+V1.3 inherits the verified V1.2 rendering foundation and adds adaptive contracts. Location therefore keeps durable reading and critical-decision content on solid/raised surfaces and confines translucent Glaze treatment to bounded application chrome and transient interaction surfaces.
 
-The repository-local V1.1 layer:
+The repository-local V1.3 layer:
 
 - keeps neutral structure dominant;
-- uses Deep Teal as the primary atmospheric identity and Soft Amber as restrained secondary counter-light;
-- limits the default background composition to one teal aura and one amber aura;
-- preserves a 48px minimum interactive target for buttons, controls, navigation items, and role-based interactive surfaces;
+- uses Deep Teal as the primary Location identity with Soft Amber as restrained secondary counter-light;
+- preserves the frosted/neutral foundation inherited by V1.3 rather than introducing decorative glass everywhere;
+- preserves expressive shape hierarchy through bounded control/container/hero radii;
+- preserves a 48px minimum human-reachability target for buttons, controls, navigation items, and role-based interactive surfaces;
 - provides explicit keyboard focus treatment;
 - implements Light and Dark system appearance plus an explicit Deep Dark structural mode;
 - removes backdrop-dependent effects for Reduced Transparency;
 - suppresses nonessential motion for Reduced Motion;
 - removes custom atmosphere and defers color behavior to the platform in forced-colors mode;
 - keeps nested backdrop-blur stacks out of the composition;
-- does not require Environmental Color Memory or content sampling.
+- does not manufacture dynamic-color, personalization, contextual-intelligence, or adaptive-navigation acceptance that has not been separately implemented and tested for Location.
 
 ## Location authority boundary
 
@@ -60,6 +66,7 @@ The existing Timeline screen privacy mode remains a presentation-only shoulder-s
 Exact Location revisions still require, as applicable:
 
 - strict web type-check/build evidence;
+- current Platform Contract validation against the reviewed V1.3-compatible central validator;
 - representative rendered visual review and Human Visual Excellence acceptance;
 - keyboard and screen-reader accessibility review;
 - 200% text and responsive reflow;
@@ -69,4 +76,7 @@ Exact Location revisions still require, as applicable:
 - phone/tablet/desktop form-factor and safe-area acceptance;
 - representative browser/platform performance evidence;
 - user-facing Deep Dark preference acceptance if that becomes supported product behavior;
-- production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, deployment, rollback, and production approval evidence.
+- rollback verification against a recorded known-good consumer integration;
+- production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, deployment, release, and production approval evidence.
+
+V1.3.1 follow-up work in the Glaze project does not grant any of these Location-specific acceptance categories automatically.
