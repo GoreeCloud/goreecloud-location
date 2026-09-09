@@ -155,13 +155,17 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Verify Glaze UI 2.0 source contract
+      - name: Verify current Glaze UI V1.3 source contract
         shell: bash
         run: |
           set -euo pipefail
-          grep -F 'data-glaze-version="2.0.0"' src/main.ts > /dev/null
-          if grep -R -n -E 'Glaze UI 1\.[0-9]|data-glaze-version="1\.' src; then
-            echo "Location web source still contains a stale Glaze UI 1.x contract." >&2
+          grep -F 'data-glaze-version="1.3.0"' src/main.ts > /dev/null
+          grep -F 'src/glaze-v1-3.ts' index.html > /dev/null
+          grep -F 'fc7cc91d2eace8da2371371c2855c24cbcb326a1' src/glaze-v1-3.css > /dev/null
+          grep -F 'css/glaze-v1.3.0.css' src/glaze-v1-3.css > /dev/null
+          grep -F 'js/glaze-v1.3.0.mjs' src/glaze-v1-3.css > /dev/null
+          if grep -R -n -E 'data-glaze-version="2\.|src/glaze-v1-1\.ts|Target: 1\.1\.0|current Stable.*(1\.1\.0|2\.0\.0)' src index.html; then
+            echo "Location web activation still contains a stale pre-reset Glaze source contract." >&2
             exit 1
           fi
 
