@@ -1,5 +1,5 @@
 # yamllint disable rule:line-length
-# The reusable workflow checks out and verifies the exact caller revision.
+# The reusable workflow checks out and verifies the exact caller revision; this lane is kept synchronized with repository CI for review heads.
 name: Platform Contract
 
 "on":
