@@ -1,34 +1,30 @@
-# GoreeCloud Location — GLAZE UI V1.3 Adoption
+# GoreeCloud Location — GLAZE UI Adoption
 
 ## Status
 
 Development source migration only. This record does not establish downstream conformance, Stable Location qualification, deployment, or production approval.
 
-## Current authority
+## Current shared authority versus implemented Location source
 
-- Target: **GLAZE UI V1.3 — Adaptive Resonance (`1.3.0`)**
-- Lifecycle authority: `registry/lifecycle.json`
-- Current Stable / Official: `1.3.0`
-- Stable source integration anchor: `fc7cc91d2eace8da2371371c2855c24cbcb326a1`
-- Stable web entrypoint: `css/glaze-v1.3.0.css`
-- Stable runtime entrypoint: `js/glaze-v1.3.0.mjs`
-- Migration authority: `MIGRATION_V1_2_TO_V1_3.md`
-- Rollback baseline: `1.2.0`
-- Planned next hardening line: `1.3.1-candidate`
+- Current required shared consumer target: **GLAZE UI V1.4.1 / `1.4.1`**
+- Current Stable shared authority revision: `4fab9da0fad2e5c974e0e66ec88632c61745751c`
+- Immediate shared rollback baseline: `1.4.0`
+- Current implemented Location web source mapping: **GLAZE UI V1.3 / `1.3.0` — Adaptive Resonance**
+- Implemented V1.3 source integration anchor: `fc7cc91d2eace8da2371371c2855c24cbcb326a1`
+- Implemented V1.3 web entrypoint: `css/glaze-v1.3.0.css`
+- Implemented V1.3 runtime entrypoint: `js/glaze-v1.3.0.mjs`
 
-The `.candidate` suffix on inherited V1.3 implementation-source filenames in the Glaze repository records source-stage provenance; it does not change the Stable lifecycle of the `1.3.0` aggregate entrypoints.
+Location therefore remains `applicable-migration-required`. This governance reconciliation does **not** relabel the existing V1.3 implementation as V1.4 or V1.4.1 and does not reuse V1.3 application evidence as current-target acceptance.
 
 ## Historical source boundary
 
-Location previously carried Development source markers and migration work for pre-reset Glaze lines, including `2.0.0` and a later V1.1 reconciliation branch. Those records remain historical exact-revision evidence. They are not current consumer authority and must not be reinterpreted as V1.3 acceptance.
+Location previously carried Development source markers and migration work for pre-reset Glaze lines, including `2.0.0` and later V1.1/V1.3 reconciliation work. Those records remain historical exact-revision evidence. They are not current consumer authority and must not be reinterpreted as V1.4.1 acceptance.
 
-The active V1.3 mapping removes stale 2.x activation and the V1.1 active entrypoint from the current Location web source path. CI fails closed unless the exact `1.3.0` marker, current local V1.3 entrypoint, exact Stable source integration anchor, and official Stable web/runtime entrypoint identifiers are present.
+The active implementation still uses the repository-local V1.3 source layer while the next source tranche is prepared. CI must continue to fail closed on accidental removal or relabeling of that implemented V1.3 source until a separately reviewed V1.4.1 migration actually changes the application bytes.
 
-## Web mapping
+## Current V1.3 web mapping
 
-V1.3 inherits the verified V1.2 rendering foundation and adds adaptive contracts. Location therefore keeps durable reading and critical-decision content on solid/raised surfaces and confines translucent Glaze treatment to bounded application chrome and transient interaction surfaces.
-
-The repository-local V1.3 layer:
+The implemented V1.3 layer:
 
 - keeps neutral structure dominant;
 - uses Deep Teal as the primary Location identity with Soft Amber as restrained secondary counter-light;
@@ -40,12 +36,18 @@ The repository-local V1.3 layer:
 - removes backdrop-dependent effects for Reduced Transparency;
 - suppresses nonessential motion for Reduced Motion;
 - removes custom atmosphere and defers color behavior to the platform in forced-colors mode;
-- keeps nested backdrop-blur stacks out of the composition;
-- does not manufacture dynamic-color, personalization, contextual-intelligence, or adaptive-navigation acceptance that has not been separately implemented and tested for Location.
+- keeps nested backdrop-blur stacks out of the composition; and
+- does not manufacture dynamic-color, contextual-intelligence, optical-engine, personalization, or adaptive-navigation acceptance that has not been separately implemented and tested for Location.
+
+## Required V1.4.1 source migration boundary
+
+The next Location design-system source tranche must independently map the current Stable V1.4.1 contract, including the applicable V1.4 Optical Intelligence and V1.4.1 hardening boundaries, without weakening Location privacy or accessibility controls. It must preserve the rule that Location data, Timeline content, device state, Find My state, privacy/security/recovery state, and authorization evidence cannot become uncontrolled optical-context inputs.
+
+A future migration must produce fresh repository-local build/render/accessibility/adaptive/device/performance evidence. Shared Glaze V1.4.1 qualification is not Location-specific acceptance.
 
 ## Location authority boundary
 
-GLAZE UI governs presentation only. This migration does not change or manufacture:
+GLAZE UI governs presentation only. This migration program does not change or manufacture:
 
 - device/user location collection;
 - personal Timeline/history truth;
@@ -56,27 +58,11 @@ GLAZE UI governs presentation only. This migration does not change or manufactur
 - Privacy Shield privacy decisions;
 - Wardveil Security findings;
 - Everkeep continuity state;
-- GoreeCloud Identity authorization;
+- GoreeCloud Identity authorization; or
 - GoreeCloud Mesh coordination.
 
-The existing Timeline screen privacy mode remains a presentation-only shoulder-surfing control and is not promoted into a retention/deletion or OS screen-protection claim by this theme migration.
+The existing Timeline screen privacy mode remains a presentation-only shoulder-surfing control and is not promoted into a retention/deletion or OS screen-protection claim.
 
 ## Acceptance still required
 
-Exact Location revisions still require, as applicable:
-
-- strict web type-check/build evidence;
-- current Platform Contract validation against the reviewed V1.3-compatible central validator;
-- representative rendered visual review and Human Visual Excellence acceptance;
-- keyboard and screen-reader accessibility review;
-- 200% text and responsive reflow;
-- RTL/localization;
-- Reduced Motion and Reduced Transparency acceptance;
-- contrast/high-contrast/forced-colors behavior;
-- phone/tablet/desktop form-factor and safe-area acceptance;
-- representative browser/platform performance evidence;
-- user-facing Deep Dark preference acceptance if that becomes supported product behavior;
-- rollback verification against a recorded known-good consumer integration;
-- production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, deployment, release, and production approval evidence.
-
-V1.3.1 follow-up work in the Glaze project does not grant any of these Location-specific acceptance categories automatically.
+Location still requires, as applicable, a real V1.4.1 source migration plus strict type-check/build evidence, representative rendered review, Human Visual Excellence, keyboard/screen-reader accessibility, 200% text and responsive reflow, RTL/localization, Reduced Motion/Transparency, contrast/high-contrast/forced-colors behavior, representative phone/tablet/desktop and browser/platform performance, rollback, production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, deployment, release, and production approval evidence.
