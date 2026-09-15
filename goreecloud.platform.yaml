@@ -57,7 +57,7 @@ platform_systems:
       - apps/web/src/glaze-v1-3.ts
       - apps/web/src/glaze-v1-3.css
       - docs/GLAZE_UI_ADOPTION.md
-    notes: Location Development source still truthfully maps its web shell to GLAZE UI V1.3 / 1.3.0 Adaptive Resonance at exact source integration anchor fc7cc91d2eace8da2371371c2855c24cbcb326a1. The current required shared consumer target is GLAZE UI V1.4.1 / 1.4.1 at Stable main revision 4fab9da0fad2e5c974e0e66ec88632c61745751c, so this repository remains migration-required. No V1.4.1 source, rendered, accessibility, adaptive/form-factor, representative-browser/device, performance, rollback, Human Visual Excellence, release, or production acceptance is claimed.
+    notes: Location Development source still truthfully maps its web shell to GLAZE UI V1.3 / 1.3.0 Adaptive Resonance at exact source integration anchor fc7cc91d2eace8da2371371c2855c24cbcb326a1. The current required shared consumer target is GLAZE UI V1.4.1 / 1.4.1 at signed Stable main revision 4fab9da0fad2e5c974e0e66ec88632c61745751c, so this repository remains migration-required. No V1.4.1 source, rendered, accessibility, adaptive/form-factor, representative-browser/device, performance, rollback, Human Visual Excellence, release, or production acceptance is claimed.
   mesh:
     result: applicable-blocked
     version: null
@@ -68,6 +68,7 @@ platform_systems:
     capabilities: []
     dependencies:
       - goreecloud-identity
+      - goreecloud-sync
       - privacy-shield
       - wardveil-security
       - everkeep
@@ -80,6 +81,13 @@ platform_systems:
       - README.md
       - services/api/internal/identity
     notes: Development user/device credentials enforce owner and device boundaries, but production GoreeCloud Identity user, device, session, and recovery integration and acceptance remain incomplete.
+  sync:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - README.md
+      - SPECIFICATIONS.md
+    notes: Cross-device live/history/preferences/Find My continuity requires an explicit authorized GoreeCloud Sync dataset, change/version model, conflict behavior, offline-resume behavior, and runtime acceptance. No accepted Sync integration is established by the current Development source.
 
 health:
   health_endpoint: /healthz
@@ -90,6 +98,7 @@ continuity:
     required: true
     requirements:
       - Back up owner-controlled location samples, device state, preferences, sharing state when implemented, and required service metadata through an accepted Everkeep scope with privacy-preserving handling.
+      - Keep GoreeCloud Sync replication distinct from backup truth and recoverability.
   restore:
     required: true
     requirements:
@@ -134,6 +143,7 @@ conformance:
     - Everkeep backup, restore, and recovery integration and acceptance remain incomplete.
     - GoreeCloud Mesh registration, runtime coordination, and acceptance remain incomplete.
     - GoreeCloud Identity production user/device/session integration and acceptance remain incomplete.
+    - GoreeCloud Sync authorized dataset, change/version tracking, conflict reconciliation, offline-resume, cross-device continuity, and runtime acceptance remain incomplete.
     - Android background collection, representative-device validation, and production geographic-map delivery remain incomplete.
     - Find My recovery authority, anti-stalking runtime acceptance, and production recovery evidence remain incomplete.
     - Required Stable acceptance-test, release, rollback, deployment, and production evidence has not been produced.
