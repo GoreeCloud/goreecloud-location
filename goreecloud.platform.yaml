@@ -1,4 +1,4 @@
-schema_version: "0.2"
+schema_version: "0.3"
 
 component:
   type: application
@@ -110,10 +110,10 @@ external_dependencies:
     version_constraint: ">=16"
 
 compatibility:
-  platform_contract: "0.2"
+  platform_contract: "0.3"
   glaze_ui_required: "1.4.1"
   requires:
-    - goreecloud-platform-contract==0.2
+    - goreecloud-platform-contract==0.3
     - glaze-ui==1.4.1
   provides:
     - location-api-v1
