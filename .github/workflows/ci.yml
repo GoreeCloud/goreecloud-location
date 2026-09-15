@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  LOCATION_SOURCE_REVISION: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: location-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -21,8 +24,14 @@ jobs:
       run:
         working-directory: services/api
     steps:
-      - name: Check out repository
+      - name: Check out exact Location source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LOCATION_SOURCE_REVISION }}
+          persist-credentials: false
+
+      - name: Verify exact Location source revision
+        run: test "$(git rev-parse HEAD)" = "$LOCATION_SOURCE_REVISION"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -84,8 +93,14 @@ jobs:
       LOCATION_DATABASE_PASSWORD: goreecloud_location_ci_only_not_secret
       LOCATION_DATABASE_SSLMODE: disable
     steps:
-      - name: Check out repository
+      - name: Check out exact Location source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LOCATION_SOURCE_REVISION }}
+          persist-credentials: false
+
+      - name: Verify exact Location source revision
+        run: test "$(git rev-parse HEAD)" = "$LOCATION_SOURCE_REVISION"
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -152,8 +167,14 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - name: Check out repository
+      - name: Check out exact Location source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LOCATION_SOURCE_REVISION }}
+          persist-credentials: false
+
+      - name: Verify exact Location source revision
+        run: test "$(git rev-parse HEAD)" = "$LOCATION_SOURCE_REVISION"
 
       - name: Verify current Glaze UI V1.3 source contract
         shell: bash
@@ -187,8 +208,14 @@ jobs:
       run:
         working-directory: apps/android
     steps:
-      - name: Check out repository
+      - name: Check out exact Location source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LOCATION_SOURCE_REVISION }}
+          persist-credentials: false
+
+      - name: Verify exact Location source revision
+        run: test "$(git rev-parse HEAD)" = "$LOCATION_SOURCE_REVISION"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
