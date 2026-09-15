@@ -1,4 +1,5 @@
 # yamllint disable rule:line-length
+# The reusable workflow checks out and verifies the exact caller revision; this lane is kept synchronized with repository CI for review heads.
 name: Platform Contract
 
 "on":
@@ -19,6 +20,6 @@ permissions:
 
 jobs:
   validate:
-    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@3204afc4f603f3b29a456f01cbb28755d7f7bd00
+    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@dd7701b116d210a82ec0cb18ccb84b553b6e87e1
     with:
       manifest-path: goreecloud.platform.yaml
