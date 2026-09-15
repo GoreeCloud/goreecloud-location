@@ -13,6 +13,7 @@ Development source migration only. This record does not establish downstream con
 - Implemented V1.3 source integration anchor: `fc7cc91d2eace8da2371371c2855c24cbcb326a1`
 - Implemented V1.3 web entrypoint: `css/glaze-v1.3.0.css`
 - Implemented V1.3 runtime entrypoint: `js/glaze-v1.3.0.mjs`
+- Current Platform Contract authority: **0.3 with exactly eight Integral Platform Systems, including GoreeCloud Sync**
 
 Location therefore remains `applicable-migration-required`. This governance reconciliation does **not** relabel the existing V1.3 implementation as V1.4 or V1.4.1 and does not reuse V1.3 application evidence as current-target acceptance.
 
@@ -58,11 +59,12 @@ GLAZE UI governs presentation only. This migration program does not change or ma
 - Privacy Shield privacy decisions;
 - Wardveil Security findings;
 - Everkeep continuity state;
-- GoreeCloud Identity authorization; or
-- GoreeCloud Mesh coordination.
+- GoreeCloud Identity authorization;
+- GoreeCloud Mesh coordination; or
+- GoreeCloud Sync dataset, change/version, conflict, replication, offline-resume, or cross-device continuity authority.
 
 The existing Timeline screen privacy mode remains a presentation-only shoulder-surfing control and is not promoted into a retention/deletion or OS screen-protection claim.
 
 ## Acceptance still required
 
-Location still requires, as applicable, a real V1.4.1 source migration plus strict type-check/build evidence, representative rendered review, Human Visual Excellence, keyboard/screen-reader accessibility, 200% text and responsive reflow, RTL/localization, Reduced Motion/Transparency, contrast/high-contrast/forced-colors behavior, representative phone/tablet/desktop and browser/platform performance, rollback, production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, deployment, release, and production approval evidence.
+Location still requires, as applicable, a real V1.4.1 source migration plus strict type-check/build evidence, representative rendered review, Human Visual Excellence, keyboard/screen-reader accessibility, 200% text and responsive reflow, RTL/localization, Reduced Motion/Transparency, contrast/high-contrast/forced-colors behavior, representative phone/tablet/desktop and browser/platform performance, rollback, production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, Sync, deployment, release, and production approval evidence.
