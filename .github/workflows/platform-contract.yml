@@ -1,4 +1,5 @@
 # yamllint disable rule:line-length
+# The reusable workflow checks out and verifies the exact caller revision.
 name: Platform Contract
 
 "on":
@@ -19,8 +20,6 @@ permissions:
 
 jobs:
   validate:
-    # Development pin to corrected Platform Contract 0.3 candidate with the governed seven-system model.
-    # Replace with the accepted immutable mainline revision after central integration.
-    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@96701cc5f20c8e0deaad512d2a9f83e0411f3f18
+    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@908701c6795ffcd608bd3d8a1e787395a04f1d62
     with:
       manifest-path: goreecloud.platform.yaml
