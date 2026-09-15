@@ -1,4 +1,4 @@
-schema_version: "0.3"
+schema_version: "0.2"
 
 component:
   type: application
@@ -81,13 +81,6 @@ platform_systems:
       - README.md
       - services/api/internal/identity
     notes: Development user/device credentials enforce owner and device boundaries, but production GoreeCloud Identity user, device, session, and recovery integration and acceptance remain incomplete.
-  sync:
-    result: applicable-blocked
-    version: null
-    evidence:
-      - README.md
-      - SPECIFICATIONS.md
-    notes: Cross-device live/history/preferences/Find My continuity requires an explicit authorized GoreeCloud Sync dataset, change/version model, conflict behavior, offline-resume behavior, and runtime acceptance. No accepted Sync integration is established by the current Development source.
 
 health:
   health_endpoint: /healthz
@@ -119,10 +112,10 @@ external_dependencies:
     version_constraint: ">=16"
 
 compatibility:
-  platform_contract: "0.3"
+  platform_contract: "0.2"
   glaze_ui_required: "1.4.1"
   requires:
-    - goreecloud-platform-contract==0.3
+    - goreecloud-platform-contract==0.2
     - glaze-ui==1.4.1
   provides:
     - location-api-v1
@@ -143,7 +136,7 @@ conformance:
     - Everkeep backup, restore, and recovery integration and acceptance remain incomplete.
     - GoreeCloud Mesh registration, runtime coordination, and acceptance remain incomplete.
     - GoreeCloud Identity production user/device/session integration and acceptance remain incomplete.
-    - GoreeCloud Sync authorized dataset, change/version tracking, conflict reconciliation, offline-resume, cross-device continuity, and runtime acceptance remain incomplete.
+    - GoreeCloud Sync is separately governed application/service functionality; its authorized dataset, change/version tracking, conflict reconciliation, offline-resume, cross-device continuity, and runtime acceptance remain incomplete.
     - Android background collection, representative-device validation, and production geographic-map delivery remain incomplete.
     - Find My recovery authority, anti-stalking runtime acceptance, and production recovery evidence remain incomplete.
     - Required Stable acceptance-test, release, rollback, deployment, and production evidence has not been produced.
