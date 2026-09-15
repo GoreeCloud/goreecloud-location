@@ -20,6 +20,6 @@ permissions:
 
 jobs:
   validate:
-    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@908701c6795ffcd608bd3d8a1e787395a04f1d62
+    uses: GoreeCloud/GoreeCloud/.github/workflows/reusable-platform-manifest.yml@dd7701b116d210a82ec0cb18ccb84b553b6e87e1
     with:
       manifest-path: goreecloud.platform.yaml
