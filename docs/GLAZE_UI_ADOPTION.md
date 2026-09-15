@@ -13,7 +13,8 @@ Development source migration only. This record does not establish downstream con
 - Implemented V1.3 source integration anchor: `fc7cc91d2eace8da2371371c2855c24cbcb326a1`
 - Implemented V1.3 web entrypoint: `css/glaze-v1.3.0.css`
 - Implemented V1.3 runtime entrypoint: `js/glaze-v1.3.0.mjs`
-- Current Platform Contract authority: **0.3 with exactly eight Integral Platform Systems, including GoreeCloud Sync**
+- Current Platform Contract authority: **0.2 with exactly seven Integral Platform Systems**
+- GoreeCloud Sync: **separately governed application/service functionality, not an eighth Integral Platform System**
 
 Location therefore remains `applicable-migration-required`. This governance reconciliation does **not** relabel the existing V1.3 implementation as V1.4 or V1.4.1 and does not reuse V1.3 application evidence as current-target acceptance.
 
@@ -65,6 +66,10 @@ GLAZE UI governs presentation only. This migration program does not change or ma
 
 The existing Timeline screen privacy mode remains a presentation-only shoulder-surfing control and is not promoted into a retention/deletion or OS screen-protection claim.
 
+## Platform and Sync boundary
+
+Location evaluates exactly seven Integral Platform Systems under Contract 0.2: GoreeCloud Manager, Privacy Shield, Wardveil Security, Everkeep, Glaze UI, GoreeCloud Mesh, and GoreeCloud Identity. GoreeCloud Sync remains separately governed because Location's cross-device continuity needs a real authorized Sync dataset, change/version model, conflict behavior, replication/offline-resume behavior, and runtime acceptance. Removing Sync from `platform_systems` does not waive or discard those obligations.
+
 ## Acceptance still required
 
-Location still requires, as applicable, a real V1.4.1 source migration plus strict type-check/build evidence, representative rendered review, Human Visual Excellence, keyboard/screen-reader accessibility, 200% text and responsive reflow, RTL/localization, Reduced Motion/Transparency, contrast/high-contrast/forced-colors behavior, representative phone/tablet/desktop and browser/platform performance, rollback, production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, Sync, deployment, release, and production approval evidence.
+Location still requires, as applicable, a real V1.4.1 source migration plus strict type-check/build evidence, representative rendered review, Human Visual Excellence, keyboard/screen-reader accessibility, 200% text and responsive reflow, RTL/localization, Reduced Motion/Transparency, contrast/high-contrast/forced-colors behavior, representative phone/tablet/desktop and browser/platform performance, rollback, production provider, Identity, Privacy Shield, Wardveil, Everkeep, Mesh, separately governed Sync, deployment, release, and production approval evidence.
